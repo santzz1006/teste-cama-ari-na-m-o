@@ -1,65 +1,62 @@
 /**
- * CAMAÇARI NA MÃO — script.js
- * Prefeitura de Camaçari/BA · Versão 1.0 · Abril 2026
+ * CAMAÇARI NA MÃO — script.js · Versão Integrada 3.0
+ * Prefeitura de Camaçari/BA · Abril 2026
  *
- * Arquitetura modular em JS puro:
- *   1. ESTADO     — dados e estado da aplicação
- *   2. DADOS      — mocks JSON (prontos para substituição por API REST)
- *   3. RENDERIZAÇÃO — funções de UI
- *   4. EVENTOS    — handlers de interação
- *   5. APP        — controlador principal (namespace público)
+ * Módulos:
+ *   1. ESTADO       — dados e estado da aplicação
+ *   2. DADOS        — mocks JSON (prontos para substituição por API REST)
+ *   3. MAPA         — Leaflet.js com marcadores por secretaria (V1)
+ *   4. ORÇAMENTO    — gráficos CSS sem dependências
+ *   5. VOTAÇÃO      — 1 voto por pessoa, apenas do próprio bairro
+ *   6. SOLICITAÇÕES — formulário de pedidos às secretarias
+ *   7. PERFIL       — estado do usuário
+ *   8. UI / UTILS   — toast, modal, acessibilidade
+ *   9. APP          — controlador principal
  */
 
 'use strict';
 
 /* ================================================================
-   1. ESTADO DA APLICAÇÃO
+   1. ESTADO
 ================================================================ */
 const Estado = {
   abaAtiva: 'inicio',
-
-  /** Usuário logado (null = não autenticado) */
   usuario: null,
 
-  /** CPFs que já votaram em cada proposta { propostaId: true } */
-  votos: JSON.parse(localStorage.getItem('cnm_votos') || '{}'),
+  /** voto do usuário { propostaId } — só 1 voto no total */
+  votoRegistrado: null,
 
-  /** Filtros ativos */
   filtros: {
-    obras: { bairro: '', status: '', secretaria: '' },
+    mapa:      { bairro: '', status: '', secretaria: '' },
     orcamento: { bairro: '' },
-    votacao: { bairro: '' },
+    votacao:   { bairro: '' },
+    servicos:  { categoria: 'todos' },
   },
 
-  /**
-   * Persiste votos no localStorage.
-   * Em produção: substituir por chamada à API Firebase Firestore.
-   */
-  salvarVotos() {
-    localStorage.setItem('cnm_votos', JSON.stringify(this.votos));
-  },
+  solicitacaoAtiva: null, // objeto do tipo de serviço selecionado
 
-  /** Carrega usuário salvo na sessão */
   carregarSessao() {
-    const salvo = sessionStorage.getItem('cnm_usuario');
-    if (salvo) this.usuario = JSON.parse(salvo);
+    try {
+      const u = sessionStorage.getItem('cnm_usuario');
+      if (u) this.usuario = JSON.parse(u);
+      const v = localStorage.getItem('cnm_voto');
+      if (v) this.votoRegistrado = v;
+    } catch (e) { /* ignora */ }
   },
 
   salvarSessao() {
-    if (this.usuario) {
-      sessionStorage.setItem('cnm_usuario', JSON.stringify(this.usuario));
-    } else {
-      sessionStorage.removeItem('cnm_usuario');
-    }
+    if (this.usuario) sessionStorage.setItem('cnm_usuario', JSON.stringify(this.usuario));
+    else sessionStorage.removeItem('cnm_usuario');
+  },
+
+  salvarVoto() {
+    if (this.votoRegistrado) localStorage.setItem('cnm_voto', this.votoRegistrado);
   },
 };
 
 /* ================================================================
    2. DADOS MOCKADOS
-   TODO (Semana 5 do Roadmap): substituir por fetch() às APIs REST:
-     GET /api/obras
-     GET /api/propostas
-     GET /api/orcamento
+   TODO (Semana 5): substituir por fetch('/api/obras') etc.
 ================================================================ */
 const Dados = {
 
@@ -69,6 +66,7 @@ const Dados = {
       titulo: 'Pavimentação Rua das Acácias',
       secretaria: 'SEINFRA',
       bairro: 'Nova Brasília',
+      bairroSlug: 'nova-brasilia',
       status: 'em_andamento',
       percentual: 68,
       valorTotal: 420000,
@@ -77,12 +75,14 @@ const Dados = {
       dataFim: '30/06/2026',
       responsavel: 'Eng. Carlos Souza',
       descricao: 'Pavimentação asfáltica de 1,2 km com sarjetas e calçadas acessíveis.',
+      lat: -12.6979, lng: -38.3249,
     },
     {
       id: 'obra_002',
-      titulo: 'Revitalização da Praça do Centro',
+      titulo: 'Revitalização Praça do Centro',
       secretaria: 'SEDUR',
       bairro: 'Centro',
+      bairroSlug: 'centro',
       status: 'em_andamento',
       percentual: 45,
       valorTotal: 180000,
@@ -90,13 +90,15 @@ const Dados = {
       dataInicio: '15/03/2026',
       dataFim: '15/07/2026',
       responsavel: 'Arq. Luana Ferreira',
-      descricao: 'Reforma completa do espaço público com nova iluminação LED, paisagismo e banco acessível.',
+      descricao: 'Reforma do espaço público com nova iluminação LED, paisagismo e bancos acessíveis.',
+      lat: -12.6960, lng: -38.3230,
     },
     {
       id: 'obra_003',
       titulo: 'Drenagem Avenida Radial A',
       secretaria: 'SEINFRA',
       bairro: 'Radial A',
+      bairroSlug: 'radial-a',
       status: 'em_andamento',
       percentual: 30,
       valorTotal: 650000,
@@ -104,13 +106,15 @@ const Dados = {
       dataInicio: '01/04/2026',
       dataFim: '30/09/2026',
       responsavel: 'Eng. Marcos Lima',
-      descricao: 'Obra de microdrenagem para evitar alagamentos durante chuvas fortes.',
+      descricao: 'Microdrenagem para evitar alagamentos durante chuvas fortes.',
+      lat: -12.6950, lng: -38.3280,
     },
     {
       id: 'obra_004',
-      titulo: 'Reforma da UBS Gleba A',
+      titulo: 'Reforma UBS Gleba A',
       secretaria: 'SEDUR',
       bairro: 'Gleba A',
+      bairroSlug: 'gleba-a',
       status: 'concluida',
       percentual: 100,
       valorTotal: 320000,
@@ -118,13 +122,15 @@ const Dados = {
       dataInicio: '05/01/2026',
       dataFim: '28/03/2026',
       responsavel: 'Eng. Patrícia Alves',
-      descricao: 'Reforma e ampliação da Unidade Básica de Saúde, incluindo acessibilidade.',
+      descricao: 'Reforma e ampliação da Unidade Básica de Saúde com acessibilidade.',
+      lat: -12.7021, lng: -38.3190,
     },
     {
       id: 'obra_005',
-      titulo: 'Iluminação Pública LED — Gleba B',
+      titulo: 'Iluminação LED Gleba B',
       secretaria: 'SEINFRA',
       bairro: 'Gleba B',
+      bairroSlug: 'gleba-b',
       status: 'em_andamento',
       percentual: 55,
       valorTotal: 240000,
@@ -132,13 +138,15 @@ const Dados = {
       dataInicio: '20/02/2026',
       dataFim: '20/05/2026',
       responsavel: 'Téc. João Batista',
-      descricao: 'Substituição de 320 postes por tecnologia LED de baixo consumo.',
+      descricao: 'Substituição de 320 postes convencionais por tecnologia LED de baixo consumo.',
+      lat: -12.7040, lng: -38.3210,
     },
     {
       id: 'obra_006',
-      titulo: 'Contenção de Encosta — PHOC',
+      titulo: 'Contenção de Encosta PHOC',
       secretaria: 'SEINFRA',
       bairro: 'PHOC',
+      bairroSlug: 'phoc',
       status: 'paralisada',
       percentual: 20,
       valorTotal: 890000,
@@ -146,13 +154,15 @@ const Dados = {
       dataInicio: '10/01/2026',
       dataFim: '31/10/2026',
       responsavel: 'Eng. Roberto Neves',
-      descricao: 'Contenção de encosta de risco em área habitada. Paralisada aguardando liberação ambiental.',
+      descricao: 'Contenção de encosta de risco. Paralisada aguardando licença ambiental.',
+      lat: -12.7100, lng: -38.3300,
     },
     {
       id: 'obra_007',
-      titulo: 'Calçadas Acessíveis — Abrantes',
+      titulo: 'Calçadas Acessíveis Abrantes',
       secretaria: 'SEDUR',
       bairro: 'Abrantes',
+      bairroSlug: 'abrantes',
       status: 'em_andamento',
       percentual: 72,
       valorTotal: 130000,
@@ -160,13 +170,15 @@ const Dados = {
       dataInicio: '01/03/2026',
       dataFim: '30/04/2026',
       responsavel: 'Arq. Flávia Duarte',
-      descricao: 'Implantação de calçadas niveladas com piso tátil em 3 ruas principais.',
+      descricao: 'Implantação de calçadas com piso tátil em 3 ruas principais.',
+      lat: -12.6840, lng: -38.3170,
     },
     {
       id: 'obra_008',
-      titulo: 'Recapeamento Avenida Principal — Centro',
+      titulo: 'Recapeamento Av. Principal — Centro',
       secretaria: 'SEINFRA',
       bairro: 'Centro',
+      bairroSlug: 'centro',
       status: 'concluida',
       percentual: 100,
       valorTotal: 520000,
@@ -174,75 +186,70 @@ const Dados = {
       dataInicio: '10/12/2025',
       dataFim: '28/02/2026',
       responsavel: 'Eng. Adriano Costa',
-      descricao: 'Recapeamento asfáltico de 2,4 km da principal avenida da sede municipal.',
+      descricao: 'Recapeamento asfáltico de 2,4 km da principal avenida da sede.',
+      lat: -12.6970, lng: -38.3260,
     },
   ],
 
   propostas: [
     {
       id: 'prop_001',
-      titulo: 'Nova iluminação LED na Praça de Abrantes',
+      titulo: 'Nova iluminação na Praça de Abrantes',
       descricao: 'Instalação de 40 postes LED e reforma do piso para aumentar a segurança dos moradores.',
       bairro: 'Abrantes',
       secretaria: 'SEINFRA',
       votos: 1245,
       maxVotos: 2000,
-      status: 'aberta',
       prazo: '30/05/2026',
     },
     {
       id: 'prop_002',
       titulo: 'Drenagem na Avenida Radial A',
-      descricao: 'Obra de contenção e microdrenagem para evitar alagamentos durante chuvas fortes no bairro.',
+      descricao: 'Obra de contenção e microdrenagem para evitar alagamentos durante chuvas fortes.',
       bairro: 'Radial A',
       secretaria: 'SEINFRA',
       votos: 890,
       maxVotos: 2000,
-      status: 'aberta',
       prazo: '30/05/2026',
     },
     {
       id: 'prop_003',
       titulo: 'Parque infantil no Centro',
-      descricao: 'Criação de área de lazer com brinquedos acessíveis e bancos para toda a família.',
+      descricao: 'Área de lazer com brinquedos acessíveis e bancos para famílias.',
       bairro: 'Centro',
       secretaria: 'SEDUR',
       votos: 672,
       maxVotos: 2000,
-      status: 'aberta',
       prazo: '30/05/2026',
     },
     {
       id: 'prop_004',
       titulo: 'Escola de informática na Gleba A',
-      descricao: 'Criação de espaço público de capacitação digital com computadores e acesso à internet.',
+      descricao: 'Espaço público de capacitação digital com computadores e acesso à internet.',
       bairro: 'Gleba A',
       secretaria: 'SEDUR',
       votos: 1100,
       maxVotos: 2000,
-      status: 'aberta',
       prazo: '30/05/2026',
     },
     {
       id: 'prop_005',
       titulo: 'Reforma do campo de futebol — Nova Brasília',
-      descricao: 'Reforma do gramado, instalação de alambrado e vestiários para uso comunitário.',
+      descricao: 'Reforma do gramado, alambrado e vestiários para uso comunitário.',
       bairro: 'Nova Brasília',
       secretaria: 'SEDUR',
       votos: 543,
       maxVotos: 2000,
-      status: 'aberta',
       prazo: '30/05/2026',
     },
     {
       id: 'prop_006',
       titulo: 'Calçadas acessíveis na Gleba B',
-      descricao: 'Nivelamento e instalação de piso tátil em 5 ruas para cadeirantes e pessoas com deficiência visual.',
+      descricao: 'Nivelamento com piso tátil em 5 ruas para cadeirantes e deficientes visuais.',
       bairro: 'Gleba B',
       secretaria: 'SEINFRA',
       votos: 791,
       maxVotos: 2000,
-      status: 'aberta',
       prazo: '30/05/2026',
     },
   ],
@@ -250,20 +257,44 @@ const Dados = {
   orcamento: {
     totalAnual: 520000000,
     porSecretaria: [
-      { nome: 'SEINFRA', valor: 210000000, cor: '#1A7A4A', percentual: 40 },
-      { nome: 'SEDUR',   valor: 156000000, cor: '#E8900A', percentual: 30 },
-      { nome: 'SEFAZ',   valor: 104000000, cor: '#1A5F9E', percentual: 20 },
-      { nome: 'Outros',  valor: 50000000,  cor: '#868E96', percentual: 10 },
+      { nome: 'SEINFRA', valor: 210000000, cor: '#D97706', percentual: 40 },
+      { nome: 'SEDUR',   valor: 156000000, cor: '#0E7490', percentual: 30 },
+      { nome: 'SEFAZ',   valor: 104000000, cor: '#1D4ED8', percentual: 20 },
+      { nome: 'Outros',  valor: 50000000,  cor: '#6B7280', percentual: 10 },
     ],
     porBairro: [
       { nome: 'Nova Brasília', valor: 85000000, cor: '#1A7A4A' },
-      { nome: 'Centro',        valor: 72000000, cor: '#E8900A' },
-      { nome: 'Gleba A',       valor: 65000000, cor: '#1A5F9E' },
-      { nome: 'Gleba B',       valor: 58000000, cor: '#9B59B6' },
-      { nome: 'Abrantes',      valor: 41000000, cor: '#E74C3C' },
-      { nome: 'PHOC',          valor: 35000000, cor: '#F39C12' },
-      { nome: 'Radial A',      valor: 28000000, cor: '#16A085' },
+      { nome: 'Centro',        valor: 72000000, cor: '#D97706' },
+      { nome: 'Gleba A',       valor: 65000000, cor: '#0E7490' },
+      { nome: 'Gleba B',       valor: 58000000, cor: '#1D4ED8' },
+      { nome: 'Abrantes',      valor: 41000000, cor: '#10B981' },
+      { nome: 'PHOC',          valor: 35000000, cor: '#F59E0B' },
+      { nome: 'Radial A',      valor: 28000000, cor: '#EF4444' },
     ],
+  },
+
+  /** Tipos de serviço solicitável às secretarias */
+  tiposServico: [
+    { id: 'ts_01', titulo: 'Buraco na rua',        secretaria: 'SEINFRA', icone: 'fa-solid fa-triangle-exclamation', classe: 'seinfra' },
+    { id: 'ts_02', titulo: 'Calçada danificada',   secretaria: 'SEINFRA', icone: 'fa-solid fa-person-walking',       classe: 'seinfra' },
+    { id: 'ts_03', titulo: 'Poste sem luz',         secretaria: 'SEINFRA', icone: 'fa-solid fa-lightbulb',            classe: 'seinfra' },
+    { id: 'ts_04', titulo: 'Lixo não coletado',    secretaria: 'SEDUR',   icone: 'fa-solid fa-trash',                classe: 'sedur'   },
+    { id: 'ts_05', titulo: 'Área de risco',         secretaria: 'SEDUR',   icone: 'fa-solid fa-house-crack',          classe: 'sedur'   },
+    { id: 'ts_06', titulo: 'Desmatamento ilegal',  secretaria: 'SEDUR',   icone: 'fa-solid fa-tree',                 classe: 'sedur'   },
+    { id: 'ts_07', titulo: 'Dívida / IPTU',         secretaria: 'SEFAZ',   icone: 'fa-solid fa-file-invoice-dollar',  classe: 'sefaz'   },
+    { id: 'ts_08', titulo: 'Consulta tributária',  secretaria: 'SEFAZ',   icone: 'fa-solid fa-magnifying-glass-dollar', classe: 'sefaz' },
+  ],
+
+  /** Cores dos marcadores do mapa por secretaria */
+  coresSecretaria: {
+    'SEINFRA': '#D97706',
+    'SEDUR':   '#0E7490',
+    'SEFAZ':   '#1D4ED8',
+  },
+  coresStatus: {
+    'concluida':    '#10B981',
+    'paralisada':   '#EF4444',
+    'em_andamento': null, // usa cor da secretaria
   },
 };
 
@@ -271,254 +302,391 @@ const Dados = {
    3. UTILITÁRIOS
 ================================================================ */
 const Utils = {
-  /** Formata moeda brasileira */
-  moeda(valor) {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      maximumFractionDigits: 0,
-    }).format(valor);
+  moeda(v) {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v);
   },
-
-  /** Formata número com pontos de milhar */
-  numero(valor) {
-    return new Intl.NumberFormat('pt-BR').format(valor);
+  numero(v) {
+    return new Intl.NumberFormat('pt-BR').format(v);
   },
-
-  /** Mascara CPF enquanto digita */
-  mascaraCPF(valor) {
-    return valor
-      .replace(/\D/g, '')
+  mascaraCPF(v) {
+    return v.replace(/\D/g, '')
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
   },
-
-  /** Valida CPF simples (formato) */
   validarCPF(cpf) {
-    const numeros = cpf.replace(/\D/g, '');
-    return numeros.length === 11;
+    return cpf.replace(/\D/g, '').length === 11;
   },
-
-  /** Retorna label legível para status */
-  labelStatus(status) {
-    const mapa = {
-      em_andamento: '🔨 Em andamento',
-      concluida:    '✅ Concluída',
-      paralisada:   '⏸️ Paralisada',
-    };
-    return mapa[status] || status;
+  labelStatus(s) {
+    return { em_andamento: 'Em andamento', concluida: 'Concluída', paralisada: 'Paralisada' }[s] || s;
   },
-
-  /** Debounce simples */
-  debounce(fn, ms = 200) {
-    let timer;
-    return (...args) => {
-      clearTimeout(timer);
-      timer = setTimeout(() => fn(...args), ms);
-    };
+  iconStatus(s) {
+    return { em_andamento: 'fa-solid fa-hammer', concluida: 'fa-solid fa-circle-check', paralisada: 'fa-solid fa-circle-pause' }[s] || '';
   },
 };
 
 /* ================================================================
-   4. RENDERIZAÇÃO
+   4. MÓDULO DO MAPA (Leaflet.js — retirado da V1)
+================================================================ */
+const Mapa = {
+  instancia: null,
+  camadaMarcadores: null,
+  inicializado: false,
+
+  init() {
+    if (this.inicializado) return;
+    const container = document.getElementById('mapa-container');
+    if (!container || typeof L === 'undefined') return;
+
+    // Centralizado em Camaçari/BA
+    this.instancia = L.map('mapa-container').setView([-12.6975, -38.3241], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> | Camaçari na Mão'
+    }).addTo(this.instancia);
+
+    this.camadaMarcadores = L.layerGroup().addTo(this.instancia);
+    this.inicializado = true;
+    this.renderizarMarcadores(Dados.obras);
+  },
+
+  renderizarMarcadores(obras) {
+    if (!this.instancia) return;
+    this.camadaMarcadores.clearLayers();
+
+    obras.forEach(obra => {
+      // Cor do marcador: status tem prioridade sobre secretaria
+      const corStatus = Dados.coresStatus[obra.status];
+      const cor = corStatus || Dados.coresSecretaria[obra.secretaria] || '#1A7A4A';
+
+      const icone = L.divIcon({
+        className: '',
+        html: `<div style="
+          width: 26px; height: 26px;
+          background: ${cor};
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          border: 3px solid white;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        "></div>`,
+        iconSize: [26, 26],
+        iconAnchor: [13, 26],
+        popupAnchor: [0, -28],
+      });
+
+      const popup = `
+        <div style="font-family:'DM Sans',sans-serif; min-width:180px;">
+          <div style="font-size:11px; font-weight:700; color:${cor}; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;">
+            ${obra.secretaria}
+          </div>
+          <div style="font-size:14px; font-weight:600; color:#1F2937; margin-bottom:6px; line-height:1.3;">
+            ${obra.titulo}
+          </div>
+          <div style="font-size:12px; color:#4B5563; margin-bottom:4px;">
+            <strong>Situação:</strong> ${Utils.labelStatus(obra.status)}
+          </div>
+          <div style="font-size:12px; color:#4B5563; margin-bottom:4px;">
+            <strong>Execução:</strong> ${obra.percentual}%
+          </div>
+          <div style="background:#E5E7EB; border-radius:99px; height:6px; overflow:hidden; margin-bottom:6px;">
+            <div style="width:${obra.percentual}%; height:100%; background:${cor}; border-radius:99px;"></div>
+          </div>
+          <div style="font-size:12px; font-weight:600; color:#1F2937;">
+            ${Utils.moeda(obra.valorTotal)}
+          </div>
+          <button
+            onclick="App.abrirDetalheObra('${obra.id}')"
+            style="
+              margin-top:8px; width:100%; background:${cor};
+              color:white; border:none; border-radius:99px;
+              padding:6px 12px; font-size:12px; font-weight:600;
+              cursor:pointer; font-family:'DM Sans',sans-serif;
+            ">
+            Ver detalhes
+          </button>
+        </div>
+      `;
+
+      L.marker([obra.lat, obra.lng], { icon: icone })
+        .bindPopup(popup)
+        .addTo(this.camadaMarcadores);
+    });
+  },
+
+  aplicarFiltros() {
+    const { bairro, status, secretaria } = Estado.filtros.mapa;
+    let obras = Dados.obras;
+    if (bairro)     obras = obras.filter(o => o.bairroSlug === bairro);
+    if (status)     obras = obras.filter(o => o.status === status);
+    if (secretaria) obras = obras.filter(o => o.secretaria === secretaria);
+    this.renderizarMarcadores(obras);
+    return obras;
+  },
+
+  invalidar() {
+    if (this.instancia) {
+      setTimeout(() => this.instancia.invalidateSize(), 50);
+    }
+  },
+};
+
+/* ================================================================
+   5. RENDERIZAÇÃO
 ================================================================ */
 const Render = {
 
-  /** Renderiza os cards de obras filtrados */
+  /** Lista de obras + mapa */
   obras() {
-    const { bairro, status, secretaria } = Estado.filtros.obras;
+    const obras = Mapa.aplicarFiltros();
     const lista = document.getElementById('lista-obras');
     const vazio = document.getElementById('obras-vazio');
+    const contador = document.getElementById('obras-contador');
 
-    let obras = Dados.obras;
-    if (bairro)     obras = obras.filter(o => o.bairro === bairro);
-    if (status)     obras = obras.filter(o => o.status === status);
-    if (secretaria) obras = obras.filter(o => o.secretaria === secretaria);
+    if (contador) contador.textContent = obras.length;
 
     if (obras.length === 0) {
       lista.innerHTML = '';
       vazio.hidden = false;
       return;
     }
-
     vazio.hidden = true;
+
     lista.innerHTML = obras.map(obra => `
       <article
         class="obra-card"
+        data-secretaria="${obra.secretaria}"
         role="button"
         tabindex="0"
         aria-label="Ver detalhes: ${obra.titulo}"
-        data-id="${obra.id}"
         onclick="App.abrirDetalheObra('${obra.id}')"
-        onkeypress="if(event.key==='Enter') App.abrirDetalheObra('${obra.id}')"
+        onkeypress="if(event.key==='Enter')App.abrirDetalheObra('${obra.id}')"
       >
         <div class="obra-topo">
           <h3 class="obra-titulo">${obra.titulo}</h3>
-          <span class="status-badge status-${obra.status}" aria-label="Situação: ${Utils.labelStatus(obra.status)}">
+          <span class="status-badge status-${obra.status}">
+            <i class="${Utils.iconStatus(obra.status)}" aria-hidden="true"></i>
             ${Utils.labelStatus(obra.status)}
           </span>
         </div>
-
         <div class="obra-progresso-label">
           <span>Execução</span>
-          <span><strong>${obra.percentual}%</strong> concluído</span>
+          <span><strong>${obra.percentual}%</strong></span>
         </div>
-        <div class="barra-progresso" role="progressbar" aria-valuenow="${obra.percentual}" aria-valuemin="0" aria-valuemax="100">
-          <div
-            class="barra-progresso-fill ${obra.status === 'paralisada' ? 'atrasada' : ''}"
-            style="width: ${obra.percentual}%"
-          ></div>
+        <div class="barra-progresso" role="progressbar" aria-valuenow="${obra.percentual}" aria-valuemin="0" aria-valuemax="100" aria-label="${obra.percentual}% concluído">
+          <div class="barra-progresso-fill ${obra.status === 'paralisada' ? 'paralisada' : ''}" style="width:${obra.percentual}%"></div>
         </div>
-
         <div class="obra-meta">
-          <span class="obra-meta-item">🏛️ ${obra.secretaria}</span>
-          <span class="obra-meta-item">📍 ${obra.bairro}</span>
-          <span class="obra-meta-item">💰 ${Utils.moeda(obra.valorTotal)}</span>
+          <span class="obra-meta-item"><i class="fa-solid fa-building-columns" aria-hidden="true"></i>${obra.secretaria}</span>
+          <span class="obra-meta-item"><i class="fa-solid fa-map-pin" aria-hidden="true"></i>${obra.bairro}</span>
+          <span class="obra-meta-item"><i class="fa-solid fa-sack-dollar" aria-hidden="true"></i>${Utils.moeda(obra.valorTotal)}</span>
         </div>
       </article>
     `).join('');
   },
 
-  /** Renderiza gráficos de orçamento */
+  /** Gráficos de orçamento (CSS puro) */
   orcamento() {
     const filtroBairro = Estado.filtros.orcamento.bairro;
 
-    // Gráfico por secretaria
+    // Por secretaria
     const grafSec = document.getElementById('grafico-secretarias');
-    grafSec.innerHTML = Dados.orcamento.porSecretaria.map(item => `
+    grafSec.innerHTML = Dados.orcamento.porSecretaria.map(it => `
       <div class="grafico-item">
-        <span class="grafico-item-label">${item.nome}</span>
+        <span class="grafico-item-label">${it.nome}</span>
         <div class="grafico-item-barra-wrap">
-          <div
-            class="grafico-item-barra"
-            style="width: ${item.percentual}%; background: ${item.cor};"
-            role="img"
-            aria-label="${item.nome}: ${item.percentual}% — ${Utils.moeda(item.valor)}"
-          >${item.percentual}%</div>
+          <div class="grafico-item-barra"
+            style="width:${it.percentual}%; background:${it.cor};"
+            role="img" aria-label="${it.nome}: ${it.percentual}% — ${Utils.moeda(it.valor)}">
+            ${it.percentual}%
+          </div>
         </div>
       </div>
     `).join('');
 
-    // Gráfico por bairro
+    // Por bairro
     let bairros = Dados.orcamento.porBairro;
     if (filtroBairro) bairros = bairros.filter(b => b.nome === filtroBairro);
 
-    const maxBairro = Math.max(...bairros.map(b => b.valor));
+    const max = Math.max(...bairros.map(b => b.valor));
     const grafBairro = document.getElementById('grafico-bairros');
-    grafBairro.innerHTML = bairros.map(item => {
-      const pct = Math.round((item.valor / maxBairro) * 100);
+    grafBairro.innerHTML = bairros.map(b => {
+      const pct = Math.round((b.valor / max) * 100);
+      const valorM = (b.valor / 1000000).toFixed(0);
       return `
         <div class="grafico-item">
-          <span class="grafico-item-label">${item.nome}</span>
+          <span class="grafico-item-label">${b.nome}</span>
           <div class="grafico-item-barra-wrap">
-            <div
-              class="grafico-item-barra"
-              style="width: ${pct}%; background: ${item.cor};"
-              role="img"
-              aria-label="${item.nome}: ${Utils.moeda(item.valor)}"
-            >${Utils.moeda(item.valor / 1000000).replace('R$\u00a0', '')}M</div>
+            <div class="grafico-item-barra"
+              style="width:${pct}%; background:${b.cor};"
+              role="img" aria-label="${b.nome}: R$ ${valorM} milhões">
+              R$${valorM}M
+            </div>
           </div>
         </div>
       `;
     }).join('');
   },
 
-  /** Renderiza propostas de votação */
+  /** Propostas de votação com regra: 1 voto, só no próprio bairro */
   propostas() {
     const filtroBairro = Estado.filtros.votacao.bairro;
     const lista = document.getElementById('lista-propostas');
+    const infoEl = document.getElementById('votacao-info-usuario');
 
     let propostas = Dados.propostas;
     if (filtroBairro) propostas = propostas.filter(p => p.bairro === filtroBairro);
 
+    const bairroUsuario = Estado.usuario?.bairro || null;
+    const jaVotou = Boolean(Estado.votoRegistrado);
+
+    // Atualiza informação contextual
+    if (infoEl) {
+      if (!Estado.usuario) {
+        infoEl.innerHTML = 'Faça login para votar. Você pode votar em <strong>1 proposta</strong> do seu bairro.';
+      } else if (jaVotou) {
+        const prop = Dados.propostas.find(p => p.id === Estado.votoRegistrado);
+        infoEl.innerHTML = `Você votou em: <strong>${prop ? prop.titulo : 'proposta'}</strong>. Obrigado por participar!`;
+      } else {
+        infoEl.innerHTML = `Seu bairro: <strong>${bairroUsuario}</strong>. Escolha 1 proposta para apoiar.`;
+      }
+    }
+
     lista.innerHTML = propostas.map(p => {
-      const jaVotou = Boolean(Estado.votos[p.id]);
+      const ehDoMeuBairro   = bairroUsuario && p.bairro === bairroUsuario;
+      const estaVotada      = Estado.votoRegistrado === p.id;
+      const podeVotar       = Estado.usuario && ehDoMeuBairro && !jaVotou;
+      const bloqueadoPorVoto = Estado.usuario && jaVotou && !estaVotada;
+      const bloqueadoBairro  = Estado.usuario && !ehDoMeuBairro && !jaVotou;
+
       const pctVotos = Math.round((p.votos / p.maxVotos) * 100);
 
+      let btnHtml = '';
+      let cardClass = 'proposta-card';
+      let avisoHtml = '';
+
+      if (!Estado.usuario) {
+        btnHtml = `<button class="btn-votar" onclick="App.abrirModal()" aria-label="Faça login para votar em ${p.titulo}">
+          <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Entrar para votar
+        </button>`;
+      } else if (estaVotada) {
+        cardClass += ' votada';
+        btnHtml = `<button class="btn-votar votado" disabled aria-disabled="true">
+          <i class="fa-solid fa-circle-check" aria-hidden="true"></i> Seu voto foi registrado aqui
+        </button>`;
+      } else if (bloqueadoPorVoto) {
+        cardClass += ' bloqueada';
+        btnHtml = `<button class="btn-votar bloqueado" disabled aria-disabled="true">
+          <i class="fa-solid fa-lock" aria-hidden="true"></i> Você já usou seu voto
+        </button>`;
+      } else if (bloqueadoBairro) {
+        cardClass += ' bloqueada';
+        btnHtml = `<button class="btn-votar bloqueado" disabled aria-disabled="true">
+          <i class="fa-solid fa-map-pin" aria-hidden="true"></i> Não é do seu bairro
+        </button>`;
+        avisoHtml = `<p class="proposta-aviso-bairro">
+          <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+          Você só pode votar em propostas do bairro <strong>${bairroUsuario}</strong>.
+        </p>`;
+      } else if (podeVotar) {
+        btnHtml = `<button class="btn-votar" onclick="App.votar('${p.id}')" aria-label="Votar em ${p.titulo}">
+          <i class="fa-solid fa-check-to-slot" aria-hidden="true"></i> Quero votar nesta proposta
+        </button>`;
+      }
+
       return `
-        <article class="proposta-card ${jaVotou ? 'votada' : ''}" data-id="${p.id}">
+        <article class="${cardClass}" data-id="${p.id}">
           <div class="proposta-topo">
-            <span class="proposta-bairro">📍 ${p.bairro}</span>
+            <span class="proposta-bairro">
+              <i class="fa-solid fa-map-pin" aria-hidden="true"></i> ${p.bairro}
+            </span>
             <span class="proposta-secretaria">${p.secretaria}</span>
           </div>
-
           <h3 class="proposta-titulo">${p.titulo}</h3>
           <p class="proposta-descricao">${p.descricao}</p>
-
           <div class="proposta-votos-label">
             <span><strong>${Utils.numero(p.votos)}</strong> votos</span>
             <span>Meta: ${Utils.numero(p.maxVotos)}</span>
           </div>
           <div class="proposta-votos-barra" role="progressbar" aria-valuenow="${pctVotos}" aria-valuemin="0" aria-valuemax="100">
-            <div class="proposta-votos-fill" style="width: ${pctVotos}%"></div>
+            <div class="proposta-votos-fill" style="width:${pctVotos}%"></div>
           </div>
-
-          <button
-            class="btn-votar ${jaVotou ? 'votado' : ''}"
-            onclick="App.votar('${p.id}')"
-            ${jaVotou ? 'disabled aria-disabled="true"' : ''}
-            aria-label="${jaVotou ? 'Você já votou nesta proposta' : 'Votar em: ' + p.titulo}"
-          >
-            ${jaVotou
-              ? '✅ Você já votou aqui'
-              : '🗳️ Quero votar nesta proposta'
-            }
-          </button>
-
-          <p style="font-size:0.75rem; color: var(--text-suave); margin-top: 8px; text-align:center;">
-            Votação aberta até ${p.prazo}
+          ${btnHtml}
+          ${avisoHtml}
+          <p style="font-size:0.73rem; color:var(--text-suave); text-align:center; margin-top:6px;">
+            <i class="fa-regular fa-calendar" aria-hidden="true"></i> Votação aberta até ${p.prazo}
           </p>
         </article>
       `;
     }).join('');
   },
 
-  /** Renderiza aba de perfil */
+  /** Grid de tipos de serviço */
+  tiposServico() {
+    const cat = Estado.filtros.servicos.categoria;
+    const grid = document.getElementById('tipos-servico');
+
+    let tipos = Dados.tiposServico;
+    if (cat !== 'todos') tipos = tipos.filter(t => t.secretaria === cat);
+
+    grid.innerHTML = tipos.map(t => `
+      <button
+        class="servico-btn ${t.classe}"
+        onclick="App.selecionarServico('${t.id}')"
+        aria-label="Solicitar: ${t.titulo} — ${t.secretaria}"
+      >
+        <i class="${t.icone}" aria-hidden="true"></i>
+        <span>${t.titulo}</span>
+      </button>
+    `).join('');
+  },
+
+  /** Perfil do usuário */
   perfil() {
     const naoLogado = document.getElementById('perfil-nao-logado');
     const logado    = document.getElementById('perfil-logado');
 
     if (Estado.usuario) {
       naoLogado.hidden = true;
-      logado.hidden = false;
-      document.getElementById('perfil-nome-usuario').textContent = Estado.usuario.nome || 'Cidadão';
-      document.getElementById('perfil-cpf-usuario').textContent = 'CPF: ' + Estado.usuario.cpfMascarado;
-      document.getElementById('meus-votos').textContent = Estado.usuario.totalVotos || 0;
-      document.getElementById('obras-seguidas').textContent = Estado.usuario.obrasSeguidas || 2;
+      logado.hidden    = false;
+      document.getElementById('perfil-nome-usuario').textContent = 'Cidadão(ã)';
+      document.getElementById('perfil-cpf-usuario').textContent  = 'CPF: ' + Estado.usuario.cpfMascarado;
+      document.getElementById('perfil-bairro-usuario').textContent = 'Bairro: ' + (Estado.usuario.bairro || '—');
+      document.getElementById('meus-votos-count').textContent = Estado.votoRegistrado ? '1' : '0';
+      document.getElementById('minhas-solicitacoes-count').textContent = Estado.usuario.solicitacoes || '0';
     } else {
       naoLogado.hidden = false;
-      logado.hidden = true;
+      logado.hidden    = true;
     }
   },
 
-  /** Abre modal com detalhes completos de uma obra */
+  /** Modal de detalhe de uma obra */
   detalheObra(id) {
     const obra = Dados.obras.find(o => o.id === id);
     if (!obra) return;
 
+    const cor = Dados.coresSecretaria[obra.secretaria] || '#1A7A4A';
     const conteudo = document.getElementById('obra-modal-conteudo');
     conteudo.innerHTML = `
-      <div class="status-badge status-${obra.status}" style="margin-bottom: 12px; display: inline-flex;">
+      <span class="status-badge status-${obra.status}" style="margin-bottom:12px; display:inline-flex;">
+        <i class="${Utils.iconStatus(obra.status)}" aria-hidden="true"></i>
         ${Utils.labelStatus(obra.status)}
-      </div>
-      <h2 class="obra-detalhe-titulo">${obra.titulo}</h2>
-      <p style="font-size:0.9rem; color: var(--text-secundario); margin-bottom: 16px; line-height:1.6;">
-        ${obra.descricao}
-      </p>
+      </span>
+      <h2 class="obra-detalhe-titulo" id="obra-modal-titulo">${obra.titulo}</h2>
+      <p style="font-size:0.88rem; color:var(--text-secundario); margin-bottom:14px; line-height:1.6;">${obra.descricao}</p>
 
       <div class="obra-progresso-label">
-        <span>Execução</span>
-        <span><strong>${obra.percentual}%</strong></span>
+        <span>Execução da obra</span>
+        <strong>${obra.percentual}%</strong>
       </div>
       <div class="barra-progresso" style="margin-bottom:16px;" role="progressbar" aria-valuenow="${obra.percentual}" aria-valuemin="0" aria-valuemax="100">
-        <div class="barra-progresso-fill" style="width:${obra.percentual}%"></div>
+        <div class="barra-progresso-fill" style="width:${obra.percentual}%; background:linear-gradient(90deg,${cor},${cor}aa)"></div>
       </div>
 
       <div class="obra-detalhe-grid">
         <div class="obra-detalhe-item">
           <span class="obra-detalhe-item-label">Secretaria</span>
-          <span class="obra-detalhe-item-valor">${obra.secretaria}</span>
+          <span class="obra-detalhe-item-valor" style="color:${cor}">${obra.secretaria}</span>
         </div>
         <div class="obra-detalhe-item">
           <span class="obra-detalhe-item-label">Bairro</span>
@@ -537,12 +705,12 @@ const Render = {
           <span class="obra-detalhe-item-valor">${Utils.moeda(obra.valorTotal)}</span>
         </div>
         <div class="obra-detalhe-item">
-          <span class="obra-detalhe-item-label">Valor Executado</span>
+          <span class="obra-detalhe-item-label">Executado</span>
           <span class="obra-detalhe-item-valor">${Utils.moeda(obra.valorExecutado)}</span>
         </div>
       </div>
 
-      <div class="obra-detalhe-item" style="margin-bottom:0;">
+      <div class="obra-detalhe-item">
         <span class="obra-detalhe-item-label">Responsável técnico</span>
         <span class="obra-detalhe-item-valor">${obra.responsavel}</span>
       </div>
@@ -554,361 +722,376 @@ const Render = {
     document.body.style.overflow = 'hidden';
   },
 
-  /** Toast de feedback */
-  toast(mensagem, tipo = 'sucesso', duracao = 3000) {
+  /** Toast de notificação */
+  _toastTimer: null,
+  toast(msg, tipo = 'sucesso', ms = 3200) {
     const el = document.getElementById('toast');
-    el.textContent = mensagem;
+    const icones = { sucesso: 'fa-solid fa-circle-check', erro: 'fa-solid fa-circle-xmark', aviso: 'fa-solid fa-triangle-exclamation' };
+    el.innerHTML = `<i class="${icones[tipo] || ''}" aria-hidden="true"></i> ${msg}`;
     el.className = `toast toast-${tipo}`;
     el.hidden = false;
-
-    // Força reflow para animação
-    el.offsetHeight; // eslint-disable-line
-
+    el.offsetHeight; // forçar reflow
     el.classList.add('visivel');
-
-    clearTimeout(Render._toastTimer);
-    Render._toastTimer = setTimeout(() => {
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => {
       el.classList.remove('visivel');
       setTimeout(() => { el.hidden = true; }, 300);
-    }, duracao);
+    }, ms);
   },
 
-  /** Animação de confetti ao votar */
-  confetti(btn) {
-    const rect = btn.getBoundingClientRect();
+  /** Efeito confetti ao votar */
+  confetti(el) {
+    const rect = el.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
-
-    const cores = ['#1A7A4A', '#E8900A', '#1A5F9E', '#2ECC71', '#F39C12'];
-    for (let i = 0; i < 12; i++) {
-      const el = document.createElement('div');
-      el.className = 'confetti';
-      el.style.left = (cx + (Math.random() - 0.5) * 100) + 'px';
-      el.style.top  = (cy) + 'px';
-      el.style.background = cores[Math.floor(Math.random() * cores.length)];
-      el.style.animationDelay = (Math.random() * 0.3) + 's';
-      document.body.appendChild(el);
-      el.addEventListener('animationend', () => el.remove());
+    const cores = ['#1A7A4A', '#D97706', '#0E7490', '#2ECC71', '#F59E0B'];
+    for (let i = 0; i < 14; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'confetti';
+      dot.style.cssText = `
+        left:${cx + (Math.random() - 0.5) * 120}px;
+        top:${cy}px;
+        background:${cores[Math.floor(Math.random() * cores.length)]};
+        animation-delay:${Math.random() * 0.25}s;
+      `;
+      document.body.appendChild(dot);
+      dot.addEventListener('animationend', () => dot.remove());
     }
   },
 };
 
 /* ================================================================
-   5. EVENTOS (handlers)
+   6. EVENTOS
 ================================================================ */
 const Eventos = {
-
   init() {
-    // Máscara de CPF no input do modal
-    const inputCPF = document.getElementById('input-cpf');
-    if (inputCPF) {
-      inputCPF.addEventListener('input', (e) => {
-        e.target.value = Utils.mascaraCPF(e.target.value);
-      });
-    }
+    // Máscara CPF
+    document.getElementById('input-cpf').addEventListener('input', e => {
+      e.target.value = Utils.mascaraCPF(e.target.value);
+    });
 
     // Fechar modais ao clicar no overlay
-    document.getElementById('modal-login').addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) App.fecharModal();
-    });
-    document.getElementById('modal-obra').addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) App.fecharModalObra();
-    });
-
-    // Fechar com ESC
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        App.fecharModal();
-        App.fecharModalObra();
-      }
+    ['modal-login', 'modal-obra'].forEach(id => {
+      document.getElementById(id).addEventListener('click', e => {
+        if (e.target === e.currentTarget) App[id === 'modal-login' ? 'fecharModal' : 'fecharModalObra']();
+      });
     });
 
-    // Botão fechar modal de login
+    // ESC fecha modais
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { App.fecharModal(); App.fecharModalObra(); }
+    });
+
+    // Botões fechar modal
     document.getElementById('btn-fechar-modal').addEventListener('click', App.fecharModal);
     document.getElementById('btn-fechar-obra').addEventListener('click', App.fecharModalObra);
 
     // Botão header login
     document.getElementById('btn-abrir-login').addEventListener('click', App.abrirModal);
 
-    // Filtros de obras
-    document.getElementById('filtro-bairro-obras').addEventListener('change', (e) => {
-      Estado.filtros.obras.bairro = e.target.value;
-      Render.obras();
-    });
-    document.getElementById('filtro-status-obras').addEventListener('change', (e) => {
-      Estado.filtros.obras.status = e.target.value;
-      Render.obras();
-    });
-    document.getElementById('filtro-secretaria-obras').addEventListener('change', (e) => {
-      Estado.filtros.obras.secretaria = e.target.value;
-      Render.obras();
-    });
+    // Enter nos campos de login
+    document.getElementById('input-cpf').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('input-email').focus(); });
+    document.getElementById('input-email').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('input-bairro').focus(); });
+    document.getElementById('input-bairro').addEventListener('keydown', e => { if (e.key === 'Enter') App.fazerLogin(); });
 
-    // Filtro de orçamento
-    document.getElementById('filtro-bairro-orcamento').addEventListener('change', (e) => {
-      Estado.filtros.orcamento.bairro = e.target.value;
-      Render.orcamento();
-    });
+    // Filtros do mapa
+    document.getElementById('filtro-bairro-mapa').addEventListener('change', e => { Estado.filtros.mapa.bairro = e.target.value; Render.obras(); });
+    document.getElementById('filtro-status-mapa').addEventListener('change', e => { Estado.filtros.mapa.status = e.target.value; Render.obras(); });
+    document.getElementById('filtro-secretaria-mapa').addEventListener('change', e => { Estado.filtros.mapa.secretaria = e.target.value; Render.obras(); });
 
-    // Filtro de votação
-    document.getElementById('filtro-bairro-votacao').addEventListener('change', (e) => {
-      Estado.filtros.votacao.bairro = e.target.value;
-      Render.propostas();
-    });
+    // Filtro orçamento
+    document.getElementById('filtro-bairro-orcamento').addEventListener('change', e => { Estado.filtros.orcamento.bairro = e.target.value; Render.orcamento(); });
+
+    // Filtro votação
+    document.getElementById('filtro-bairro-votacao').addEventListener('change', e => { Estado.filtros.votacao.bairro = e.target.value; Render.propostas(); });
 
     // Botões de satisfação
-    document.getElementById('satisfacao-opcoes').addEventListener('click', (e) => {
+    document.getElementById('satisfacao-opcoes').addEventListener('click', e => {
       const btn = e.target.closest('.satisfacao-btn');
       if (!btn) return;
-
-      // Remove seleção anterior
       document.querySelectorAll('.satisfacao-btn').forEach(b => b.classList.remove('selecionado'));
       btn.classList.add('selecionado');
-
-      // Mostra feedback
       document.getElementById('satisfacao-feedback').hidden = false;
-
-      // TODO: enviar avaliação para Firebase Analytics
-      // firebase.analytics().logEvent('satisfacao', { valor: btn.dataset.valor });
     });
 
     // Alto contraste
     document.getElementById('btn-contraste').addEventListener('click', () => {
-      document.body.classList.toggle('alto-contraste');
-      const ativo = document.body.classList.contains('alto-contraste');
+      const ativo = document.body.classList.toggle('alto-contraste');
       document.getElementById('btn-contraste').setAttribute('aria-pressed', String(ativo));
       localStorage.setItem('cnm_contraste', ativo ? '1' : '0');
-      Render.toast(ativo ? '♿ Alto contraste ativado' : '♿ Alto contraste desativado', 'sucesso', 2000);
+      Render.toast(ativo ? 'Alto contraste ativado' : 'Alto contraste desativado', 'sucesso', 1800);
     });
 
-    // Restaura preferência de contraste
-    if (localStorage.getItem('cnm_contraste') === '1') {
-      document.body.classList.add('alto-contraste');
-    }
+    // Tamanho de fonte
+    document.getElementById('btn-fonte').addEventListener('click', () => {
+      const ativo = document.body.classList.toggle('fonte-aumentada');
+      localStorage.setItem('cnm_fonte', ativo ? '1' : '0');
+      Render.toast(ativo ? 'Texto maior ativado' : 'Tamanho de texto normal', 'sucesso', 1800);
+    });
 
-    // Login com Enter no formulário
-    document.getElementById('input-email').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') App.fazerLogin();
-    });
-    document.getElementById('input-cpf').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') document.getElementById('input-email').focus();
-    });
+    // Restaura preferências salvas
+    if (localStorage.getItem('cnm_contraste') === '1') document.body.classList.add('alto-contraste');
+    if (localStorage.getItem('cnm_fonte') === '1') document.body.classList.add('fonte-aumentada');
   },
 };
 
 /* ================================================================
-   6. APP — Controlador principal (namespace público)
-   Exposto globalmente para uso nos atributos onclick do HTML
+   7. APP — controlador principal
 ================================================================ */
 const App = {
 
-  /** Navega para uma aba pelo ID */
   navegarPara(aba) {
-    // Oculta aba anterior
     document.getElementById(`aba-${Estado.abaAtiva}`).hidden = true;
     document.getElementById(`tab-${Estado.abaAtiva}`).classList.remove('nav-ativo');
     document.getElementById(`tab-${Estado.abaAtiva}`).setAttribute('aria-selected', 'false');
 
-    // Ativa nova aba
     Estado.abaAtiva = aba;
     const novaAba = document.getElementById(`aba-${aba}`);
     novaAba.hidden = false;
-    novaAba.classList.add('aba-ativa');
-
     const novoTab = document.getElementById(`tab-${aba}`);
     novoTab.classList.add('nav-ativo');
     novoTab.setAttribute('aria-selected', 'true');
 
-    // Rola para o topo
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Renderiza conteúdo específico
-    if (aba === 'obras')     Render.obras();
-    if (aba === 'orcamento') Render.orcamento();
-    if (aba === 'votacao')   Render.propostas();
-    if (aba === 'perfil')    Render.perfil();
+    if (aba === 'mapa') {
+      Mapa.init();
+      Mapa.invalidar();
+      Render.obras();
+    }
+    if (aba === 'orcamento')     Render.orcamento();
+    if (aba === 'votacao')       Render.propostas();
+    if (aba === 'solicitacoes')  Render.tiposServico();
+    if (aba === 'perfil')        Render.perfil();
   },
 
-  /** Processa votação em uma proposta */
+  /** Registra um voto — regra: 1 voto, somente no próprio bairro */
   votar(propostaId) {
-    const proposta = Dados.propostas.find(p => p.id === propostaId);
-    if (!proposta) return;
-
-    // Verifica se já votou
-    if (Estado.votos[propostaId]) {
-      Render.toast('Você já votou nesta proposta.', 'aviso');
+    if (!Estado.usuario) {
+      App.abrirModal();
       return;
     }
 
-    // Registra voto (simula API)
-    Estado.votos[propostaId] = true;
-    Estado.salvarVotos();
+    const proposta = Dados.propostas.find(p => p.id === propostaId);
+    if (!proposta) return;
+
+    // Verifica bairro
+    if (Estado.usuario.bairro !== proposta.bairro) {
+      Render.toast(`Você só pode votar em propostas do bairro ${Estado.usuario.bairro}.`, 'aviso');
+      return;
+    }
+
+    // Verifica se já votou
+    if (Estado.votoRegistrado) {
+      Render.toast('Você já usou seu voto. Cada cidadão tem direito a 1 voto.', 'aviso');
+      return;
+    }
+
+    // Registra voto
+    Estado.votoRegistrado = propostaId;
+    Estado.salvarVoto();
     proposta.votos += 1;
 
-    // Atualiza stats do usuário
-    if (Estado.usuario) {
-      Estado.usuario.totalVotos = (Estado.usuario.totalVotos || 0) + 1;
-      Estado.salvarSessao();
-    }
+    if (Estado.usuario) Estado.usuario.solicitacoes = (Estado.usuario.solicitacoes || 0);
 
     // Feedback visual
     const btn = document.querySelector(`.proposta-card[data-id="${propostaId}"] .btn-votar`);
     if (btn) {
-      // Ripple
       const ripple = document.createElement('span');
       ripple.className = 'voto-ripple';
       btn.appendChild(ripple);
       ripple.addEventListener('animationend', () => ripple.remove());
-
-      // Confetti
       Render.confetti(btn);
     }
 
-    // Re-renderiza propostas
     Render.propostas();
-    Render.toast('✅ Voto registrado com sucesso! Obrigado por participar.', 'sucesso');
+    Render.toast('Voto registrado com sucesso! Obrigado por participar.', 'sucesso');
 
-    // Atualiza badge
-    const votosRestantes = Dados.propostas.filter(p => !Estado.votos[p.id]).length;
+    // Badge desaparece após votar
     const badge = document.getElementById('votacao-badge');
-    if (badge) badge.textContent = votosRestantes;
-
-    // TODO (produção): POST /api/votos com CPF + propostaId
-    // fetch('/api/votos', { method:'POST', body: JSON.stringify({...}) });
+    if (badge) badge.hidden = true;
   },
 
-  /** Abre modal de login */
-  abrirModal() {
-    if (Estado.usuario) {
-      App.navegarPara('perfil');
+  /** Seleção de tipo de serviço para solicitação */
+  selecionarServico(tipoId) {
+    const tipo = Dados.tiposServico.find(t => t.id === tipoId);
+    if (!tipo) return;
+    Estado.solicitacaoAtiva = tipo;
+
+    document.getElementById('form-solicitacao-titulo').textContent = tipo.titulo + ' — ' + tipo.secretaria;
+    document.getElementById('form-solicitacao-container').hidden = false;
+    document.getElementById('form-solicitacao-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  },
+
+  fecharFormSolicitacao() {
+    document.getElementById('form-solicitacao-container').hidden = true;
+    Estado.solicitacaoAtiva = null;
+  },
+
+  filtrarCategorias(cat) {
+    Estado.filtros.servicos.categoria = cat;
+    document.querySelectorAll('.categoria-btn').forEach(b => b.classList.remove('ativa'));
+    document.querySelector(`[data-cat="${cat}"]`)?.classList.add('ativa');
+    App.fecharFormSolicitacao();
+    Render.tiposServico();
+  },
+
+  enviarSolicitacao() {
+    const bairro    = document.getElementById('sol-bairro').value;
+    const endereco  = document.getElementById('sol-endereco').value.trim();
+    const descricao = document.getElementById('sol-descricao').value.trim();
+    const erroEl    = document.getElementById('sol-erro');
+    const sucess    = document.getElementById('sol-sucesso');
+
+    erroEl.hidden = true;
+    sucess.hidden = true;
+
+    if (!bairro) {
+      erroEl.innerHTML = '<i class="fa-solid fa-circle-xmark" aria-hidden="true"></i> Selecione seu bairro.';
+      erroEl.hidden = false;
+      document.getElementById('sol-bairro').focus();
       return;
     }
+    if (!descricao) {
+      erroEl.innerHTML = '<i class="fa-solid fa-circle-xmark" aria-hidden="true"></i> Descreva o problema antes de enviar.';
+      erroEl.hidden = false;
+      document.getElementById('sol-descricao').focus();
+      return;
+    }
+
+    // TODO (produção): POST /api/solicitacoes
+    if (Estado.usuario) Estado.usuario.solicitacoes = (Estado.usuario.solicitacoes || 0) + 1;
+
+    sucess.innerHTML = `<i class="fa-solid fa-circle-check" aria-hidden="true"></i> Solicitação enviada para <strong>${Estado.solicitacaoAtiva?.secretaria || 'a secretaria'}</strong>! Número de protocolo: <strong>#${Date.now().toString().slice(-6)}</strong>`;
+    sucess.hidden = false;
+    document.getElementById('sol-bairro').value = '';
+    document.getElementById('sol-endereco').value = '';
+    document.getElementById('sol-descricao').value = '';
+    Render.toast('Solicitação enviada com sucesso!', 'sucesso');
+  },
+
+  /** Abre o modal de login */
+  abrirModal() {
+    if (Estado.usuario) { App.navegarPara('perfil'); return; }
     const modal = document.getElementById('modal-login');
     modal.hidden = false;
     document.getElementById('input-cpf').focus();
     document.body.style.overflow = 'hidden';
   },
 
-  /** Fecha modal de login */
   fecharModal() {
-    const modal = document.getElementById('modal-login');
-    modal.hidden = true;
+    document.getElementById('modal-login').hidden = true;
     document.body.style.overflow = '';
     document.getElementById('login-erro').hidden = true;
-    document.getElementById('input-cpf').value = '';
-    document.getElementById('input-email').value = '';
+    ['input-cpf', 'input-email'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('btn-abrir-login').focus();
   },
 
-  /** Processa login */
   fazerLogin() {
-    const cpf   = document.getElementById('input-cpf').value.trim();
-    const email = document.getElementById('input-email').value.trim();
+    const cpf    = document.getElementById('input-cpf').value.trim();
+    const email  = document.getElementById('input-email').value.trim();
+    const bairro = document.getElementById('input-bairro').value;
     const erroEl = document.getElementById('login-erro');
 
     erroEl.hidden = true;
 
     if (!Utils.validarCPF(cpf)) {
-      erroEl.textContent = 'Por favor, informe um CPF válido com 11 dígitos.';
+      erroEl.innerHTML = '<i class="fa-solid fa-circle-xmark" aria-hidden="true"></i> Informe um CPF válido com 11 dígitos.';
       erroEl.hidden = false;
       document.getElementById('input-cpf').focus();
       return;
     }
-
     if (!email || !email.includes('@')) {
-      erroEl.textContent = 'Por favor, informe um e-mail válido.';
+      erroEl.innerHTML = '<i class="fa-solid fa-circle-xmark" aria-hidden="true"></i> Informe um e-mail válido.';
       erroEl.hidden = false;
       document.getElementById('input-email').focus();
       return;
     }
+    if (!bairro) {
+      erroEl.innerHTML = '<i class="fa-solid fa-circle-xmark" aria-hidden="true"></i> Selecione seu bairro para poder votar.';
+      erroEl.hidden = false;
+      document.getElementById('input-bairro').focus();
+      return;
+    }
 
-    // Simula autenticação (em produção: Firebase Auth)
+    // TODO (produção): Firebase Auth
     Estado.usuario = {
       cpf: cpf.replace(/\D/g, ''),
       cpfMascarado: cpf,
       email,
-      nome: 'Cidadão(ã)',
-      totalVotos: Object.keys(Estado.votos).length,
-      obrasSeguidas: 2,
+      bairro,
+      solicitacoes: 0,
     };
     Estado.salvarSessao();
 
     App.fecharModal();
-    Render.toast('👋 Bem-vindo(a)! Login realizado com sucesso.', 'sucesso');
-
-    // Atualiza botão header
-    document.getElementById('btn-abrir-login').innerHTML = '<span aria-hidden="true">✅</span> Meu Perfil';
+    document.getElementById('btn-login-texto').textContent = 'Meu Perfil';
+    Render.toast(`Bem-vindo(a)! Bairro registrado: ${bairro}.`, 'sucesso');
+    Render.propostas(); // atualiza votação com novo usuário
   },
 
-  /** Faz logout */
   sair() {
     Estado.usuario = null;
     Estado.salvarSessao();
-    document.getElementById('btn-abrir-login').innerHTML = '<span aria-hidden="true">👤</span> Entrar';
+    document.getElementById('btn-login-texto').textContent = 'Entrar';
     Render.perfil();
+    Render.propostas();
     Render.toast('Você saiu da sua conta.', 'sucesso', 2000);
   },
 
-  /** Abre modal com detalhe de obra */
   abrirDetalheObra(id) {
     Render.detalheObra(id);
   },
 
-  /** Fecha modal de obra */
   fecharModalObra() {
     document.getElementById('modal-obra').hidden = true;
     document.body.style.overflow = '';
   },
 
-  /** Limpa filtros de obras */
-  limparFiltrosObras() {
-    Estado.filtros.obras = { bairro: '', status: '', secretaria: '' };
-    document.getElementById('filtro-bairro-obras').value = '';
-    document.getElementById('filtro-status-obras').value = '';
-    document.getElementById('filtro-secretaria-obras').value = '';
+  limparFiltrosMapa() {
+    Estado.filtros.mapa = { bairro: '', status: '', secretaria: '' };
+    document.getElementById('filtro-bairro-mapa').value = '';
+    document.getElementById('filtro-status-mapa').value = '';
+    document.getElementById('filtro-secretaria-mapa').value = '';
     Render.obras();
   },
 
-  /** Inicializa toda a aplicação */
+  /** Inicialização geral */
   init() {
     Estado.carregarSessao();
     Eventos.init();
 
-    // Renderiza conteúdo inicial
-    Render.obras();
+    // Renderização inicial das abas não-mapa
     Render.orcamento();
     Render.propostas();
+    Render.tiposServico();
 
-    // Ajusta botão de login se já estiver logado
+    // Botão login
     if (Estado.usuario) {
-      document.getElementById('btn-abrir-login').innerHTML = '<span aria-hidden="true">✅</span> Meu Perfil';
+      document.getElementById('btn-login-texto').textContent = 'Meu Perfil';
     }
 
-    // Atualiza badge de votações disponíveis
-    const disponiveis = Dados.propostas.filter(p => !Estado.votos[p.id]).length;
+    // Badge de votação
     const badge = document.getElementById('votacao-badge');
-    if (badge) badge.textContent = disponiveis;
-    if (badge) badge.setAttribute('aria-label', `${disponiveis} propostas abertas para votar`);
-
-    // Se a URL tem hash, navega direto
-    const hash = window.location.hash.replace('#', '');
-    const abasValidas = ['inicio', 'obras', 'orcamento', 'votacao', 'perfil'];
-    if (hash && abasValidas.includes(hash)) {
-      App.navegarPara(hash);
+    if (badge) {
+      badge.textContent = Dados.propostas.length;
+      if (Estado.votoRegistrado) badge.hidden = true;
     }
+
+    // Hash URL
+    const hash = window.location.hash.replace('#', '');
+    const valid = ['inicio', 'mapa', 'orcamento', 'votacao', 'solicitacoes', 'perfil'];
+    if (hash && valid.includes(hash)) App.navegarPara(hash);
 
     console.info(
-      '%c Camaçari na Mão v1.0 ',
-      'background:#1A7A4A; color:white; padding:4px 8px; border-radius:4px; font-weight:bold;',
+      '%c Camaçari na Mão v3.0 ',
+      'background:#1A7A4A; color:#fff; padding:4px 10px; border-radius:4px; font-weight:bold;',
       '\nPrefeitura de Camaçari/BA · Sprint 10 Dias · Abril 2026'
     );
   },
 };
 
-/* ================================================================
-   INICIALIZAÇÃO
-================================================================ */
-document.addEventListener('DOMContentLoaded', App.init.bind(App));
-
-// Expõe App globalmente (necessário para onclick no HTML)
+/* Expõe App globalmente (onclick no HTML) */
 window.App = App;
+
+document.addEventListener('DOMContentLoaded', App.init.bind(App));

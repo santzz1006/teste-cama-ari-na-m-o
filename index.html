@@ -2,45 +2,65 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Camaçari na Mão — Transparência pública e participação cidadã da Prefeitura de Camaçari/BA." />
-  <title>Camaçari na Mão</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="Camaçari na Mão — Transparência pública, acompanhamento de obras e participação cidadã. Prefeitura de Camaçari/BA." />
+  <title>Camaçari na Mão — Transparência e Participação Cidadã</title>
+
+  <!-- Leaflet CSS (Mapa) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+  <!-- Font Awesome 6 Free (ícones) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
 
   <!-- Google Fonts: Fraunces (display) + DM Sans (corpo) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
-
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Roboto:ital,wght@0,400;0,500;0,600;0,700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+
+  <!-- Skip link acessibilidade -->
+  <a href="#main-content" class="skip-link">Ir para o conteúdo principal</a>
 
   <!-- ============================================================
        HEADER FIXO
   ============================================================ -->
   <header class="site-header" role="banner">
     <div class="header-inner">
-      <div class="header-brand">
-        <!-- Brasão SVG inline simples -->
-        <svg class="brand-icon" aria-hidden="true" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="20" cy="20" r="19" fill="var(--color-verde)" stroke="var(--color-verde-escuro)" stroke-width="2"/>
-          <path d="M12 28 L20 10 L28 28 Z" fill="white" opacity="0.9"/>
-          <rect x="16" y="22" width="8" height="6" rx="1" fill="var(--color-verde-escuro)"/>
+      <div class="header-brand" aria-label="Camaçari na Mão — página inicial">
+        <svg class="brand-icon" aria-hidden="true" viewBox="0 0 40 40" fill="none">
+          <circle cx="20" cy="20" r="19" fill="#1A7A4A" stroke="#0F5433" stroke-width="1.5"/>
+          <path d="M12 29 L20 11 L28 29 Z" fill="white" opacity="0.9"/>
+          <rect x="16.5" y="22" width="7" height="7" rx="1" fill="#0F5433"/>
         </svg>
         <span class="brand-name">Camaçari <strong>na Mão</strong></span>
       </div>
 
       <div class="header-actions">
-        <button class="btn-acessibilidade" id="btn-contraste" aria-label="Alternar alto contraste" title="Alto contraste">
-          <span aria-hidden="true">◑</span>
+        <!-- Acessibilidade: alto contraste -->
+        <button class="btn-header-icon" id="btn-contraste" aria-label="Alternar alto contraste" aria-pressed="false" title="Alto contraste">
+          <i class="fa-solid fa-circle-half-stroke" aria-hidden="true"></i>
         </button>
-        <button class="btn-login" id="btn-abrir-login" aria-haspopup="dialog">
-          <span aria-hidden="true">👤</span> Entrar
+        <!-- Tamanho de fonte -->
+        <button class="btn-header-icon" id="btn-fonte" aria-label="Aumentar tamanho da fonte" title="Tamanho da fonte">
+          <i class="fa-solid fa-text-height" aria-hidden="true"></i>
+        </button>
+        <!-- Login -->
+        <button class="btn-login" id="btn-abrir-login" aria-haspopup="dialog" aria-label="Entrar na plataforma">
+          <i class="fa-solid fa-circle-user" aria-hidden="true"></i>
+          <span id="btn-login-texto">Entrar</span>
         </button>
       </div>
     </div>
   </header>
 
+
+  
   <!-- ============================================================
        CONTEÚDO PRINCIPAL — ABAS
   ============================================================ -->
@@ -51,7 +71,10 @@
 
       <!-- Hero -->
       <div class="hero">
-        <div class="hero-badge">Transparência Pública · Camaçari/BA</div>
+        <div class="hero-badge">
+          <i class="fa-solid fa-building-columns" aria-hidden="true"></i>
+          Transparência Pública · Camaçari/BA
+        </div>
         <h1 class="hero-titulo">
           Sua cidade<br/>
           <span class="destaque">na palma da mão</span>
@@ -60,11 +83,13 @@
           Acompanhe obras, veja como o dinheiro público é usado e vote nas melhorias do seu bairro.
         </p>
         <div class="hero-btns">
-          <button class="btn-primario" onclick="App.navegarPara('obras')">
-            🏗️ Ver Obras
+          <button class="btn-primario" onclick="App.navegarPara('mapa')">
+            <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
+            Ver Obras no Mapa
           </button>
-          <button class="btn-secundario" onclick="App.navegarPara('votacao')">
-            🗳️ Votar Agora
+          <button class="btn-hero-sec" onclick="App.navegarPara('votacao')">
+            <i class="fa-solid fa-check-to-slot" aria-hidden="true"></i>
+            Votar Agora
           </button>
         </div>
       </div>
@@ -72,20 +97,24 @@
       <!-- Cards de resumo -->
       <div class="resumo-grid" aria-label="Resumo da plataforma">
         <div class="resumo-card">
-          <span class="resumo-numero" id="total-obras">12</span>
+          <i class="fa-solid fa-helmet-safety resumo-icone" aria-hidden="true"></i>
+          <span class="resumo-numero">12</span>
           <span class="resumo-label">Obras ativas</span>
         </div>
         <div class="resumo-card">
-          <span class="resumo-numero" id="total-bairros">8</span>
+          <i class="fa-solid fa-map-pin resumo-icone" aria-hidden="true"></i>
+          <span class="resumo-numero">8</span>
           <span class="resumo-label">Bairros</span>
         </div>
         <div class="resumo-card">
-          <span class="resumo-numero" id="total-votos">3.241</span>
-          <span class="resumo-label">Votos dados</span>
+          <i class="fa-solid fa-check-to-slot resumo-icone" aria-hidden="true"></i>
+          <span class="resumo-numero">3.241</span>
+          <span class="resumo-label">Votos</span>
         </div>
         <div class="resumo-card">
-          <span class="resumo-numero" id="total-propostas">6</span>
-          <span class="resumo-label">Propostas abertas</span>
+          <i class="fa-solid fa-list-check resumo-icone" aria-hidden="true"></i>
+          <span class="resumo-numero">6</span>
+          <span class="resumo-label">Propostas</span>
         </div>
       </div>
 
@@ -93,18 +122,18 @@
       <div class="secretarias-section">
         <h2 class="section-titulo">Secretarias Parceiras</h2>
         <div class="secretarias-grid">
-          <div class="secretaria-card">
-            <span class="secretaria-icone" aria-hidden="true">🏛️</span>
+          <div class="secretaria-card seinfra">
+            <i class="fa-solid fa-road" aria-hidden="true"></i>
             <span class="secretaria-sigla">SEINFRA</span>
             <span class="secretaria-nome">Infraestrutura</span>
           </div>
-          <div class="secretaria-card">
-            <span class="secretaria-icone" aria-hidden="true">🌱</span>
+          <div class="secretaria-card sedur">
+            <i class="fa-solid fa-seedling" aria-hidden="true"></i>
             <span class="secretaria-sigla">SEDUR</span>
-            <span class="secretaria-nome">Desenvolvimento Urbano</span>
+            <span class="secretaria-nome">Des. Urbano</span>
           </div>
-          <div class="secretaria-card">
-            <span class="secretaria-icone" aria-hidden="true">💰</span>
+          <div class="secretaria-card sefaz">
+            <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
             <span class="secretaria-sigla">SEFAZ</span>
             <span class="secretaria-nome">Fazenda</span>
           </div>
@@ -112,38 +141,42 @@
       </div>
 
       <!-- Aviso WCAG -->
-      <div class="aviso-acessibilidade" role="note">
-        <span aria-hidden="true">♿</span>
+      <div class="aviso-acessibilidade" role="note" aria-label="Informação de acessibilidade">
+        <i class="fa-solid fa-universal-access" aria-hidden="true"></i>
         Este site segue as diretrizes de acessibilidade <strong>WCAG 2.1 Nível AA</strong>.
       </div>
     </section>
 
-    <!-- ── ABA: OBRAS ────────────────────────────────────────── -->
-    <section id="aba-obras" class="aba" role="tabpanel" aria-labelledby="tab-obras" hidden>
+    <!-- ── ABA: MAPA DE OBRAS ────────────────────────────────── -->
+    <section id="aba-mapa" class="aba" role="tabpanel" aria-labelledby="tab-mapa" hidden>
 
       <div class="aba-cabecalho">
-        <h2 class="aba-titulo">🏗️ Obras em Andamento</h2>
-        <p class="aba-subtitulo">Veja o que está sendo feito no seu bairro.</p>
+        <h2 class="aba-titulo">Mapa de Obras</h2>
+        <p class="aba-subtitulo">Visualize as obras ativas no seu bairro. Toque no marcador para ver detalhes.</p>
       </div>
 
-      <!-- Filtros -->
-      <div class="filtros" role="search" aria-label="Filtrar obras">
+      <!-- Filtros do mapa -->
+      <div class="filtros" role="search" aria-label="Filtros do mapa de obras">
         <div class="filtro-grupo">
-          <label for="filtro-bairro-obras" class="filtro-label">Bairro</label>
-          <select id="filtro-bairro-obras" class="filtro-select" aria-label="Filtrar por bairro">
+          <label for="filtro-bairro-mapa" class="filtro-label">
+            <i class="fa-solid fa-map-pin" aria-hidden="true"></i> Bairro
+          </label>
+          <select id="filtro-bairro-mapa" class="filtro-select" aria-label="Filtrar por bairro">
             <option value="">Todos os bairros</option>
-            <option value="Centro">Centro</option>
-            <option value="Gleba A">Gleba A</option>
-            <option value="Gleba B">Gleba B</option>
-            <option value="Nova Brasília">Nova Brasília</option>
-            <option value="Abrantes">Abrantes</option>
-            <option value="PHOC">PHOC</option>
-            <option value="Radial A">Radial A</option>
+            <option value="centro">Centro</option>
+            <option value="gleba-a">Gleba A</option>
+            <option value="gleba-b">Gleba B</option>
+            <option value="nova-brasilia">Nova Brasília</option>
+            <option value="abrantes">Abrantes</option>
+            <option value="phoc">PHOC</option>
+            <option value="radial-a">Radial A</option>
           </select>
         </div>
         <div class="filtro-grupo">
-          <label for="filtro-status-obras" class="filtro-label">Situação</label>
-          <select id="filtro-status-obras" class="filtro-select" aria-label="Filtrar por situação">
+          <label for="filtro-status-mapa" class="filtro-label">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i> Situação
+          </label>
+          <select id="filtro-status-mapa" class="filtro-select" aria-label="Filtrar por situação">
             <option value="">Todas</option>
             <option value="em_andamento">Em andamento</option>
             <option value="concluida">Concluída</option>
@@ -151,8 +184,10 @@
           </select>
         </div>
         <div class="filtro-grupo">
-          <label for="filtro-secretaria-obras" class="filtro-label">Secretaria</label>
-          <select id="filtro-secretaria-obras" class="filtro-select" aria-label="Filtrar por secretaria">
+          <label for="filtro-secretaria-mapa" class="filtro-label">
+            <i class="fa-solid fa-building-columns" aria-hidden="true"></i> Secretaria
+          </label>
+          <select id="filtro-secretaria-mapa" class="filtro-select" aria-label="Filtrar por secretaria">
             <option value="">Todas</option>
             <option value="SEINFRA">SEINFRA</option>
             <option value="SEDUR">SEDUR</option>
@@ -161,66 +196,83 @@
         </div>
       </div>
 
-      <!-- Lista de obras (preenchida pelo JS) -->
-      <div id="lista-obras" class="lista-obras" aria-live="polite" aria-label="Lista de obras">
-        <!-- Cards gerados pelo JS -->
+      <!-- Legenda de cores -->
+      <div class="mapa-legenda" aria-label="Legenda do mapa">
+        <span class="legenda-item"><span class="legenda-dot" style="background:#D97706"></span>SEINFRA</span>
+        <span class="legenda-item"><span class="legenda-dot" style="background:#0E7490"></span>SEDUR</span>
+        <span class="legenda-item"><span class="legenda-dot" style="background:#1D4ED8"></span>SEFAZ</span>
+        <span class="legenda-item"><span class="legenda-dot" style="background:#10B981"></span>Concluída</span>
+        <span class="legenda-item"><span class="legenda-dot" style="background:#EF4444"></span>Paralisada</span>
       </div>
 
-      <!-- Estado vazio -->
+      <!-- Container do mapa Leaflet -->
+      <div id="mapa-container" class="mapa-wrapper" role="region" aria-label="Mapa interativo de obras de Camaçari"></div>
+
+      <!-- Lista de obras abaixo do mapa -->
+      <div class="lista-obras-titulo">
+        <h3 class="subsection-titulo">
+          <i class="fa-solid fa-list" aria-hidden="true"></i>
+          Lista de Obras
+          <span id="obras-contador" class="contador-badge"></span>
+        </h3>
+      </div>
+      <div id="lista-obras" class="lista-obras" aria-live="polite" aria-label="Lista de obras"></div>
       <div id="obras-vazio" class="estado-vazio" hidden>
-        <span aria-hidden="true" style="font-size:3rem">🔍</span>
-        <p>Nenhuma obra encontrada para este filtro.</p>
-        <button class="btn-secundario" onclick="App.limparFiltrosObras()">Limpar filtros</button>
+        <i class="fa-solid fa-magnifying-glass" style="font-size:2.5rem; color:var(--color-cinza-400);" aria-hidden="true"></i>
+        <p>Nenhuma obra encontrada com este filtro.</p>
+        <button class="btn-outline" onclick="App.limparFiltrosMapa()">
+          <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Limpar filtros
+        </button>
       </div>
-
     </section>
 
     <!-- ── ABA: ORÇAMENTO ────────────────────────────────────── -->
     <section id="aba-orcamento" class="aba" role="tabpanel" aria-labelledby="tab-orcamento" hidden>
 
       <div class="aba-cabecalho">
-        <h2 class="aba-titulo">💰 Orçamento Municipal</h2>
-        <p class="aba-subtitulo">Veja como o dinheiro da cidade está sendo usado.</p>
+        <h2 class="aba-titulo">Orçamento Municipal</h2>
+        <p class="aba-subtitulo">Veja como o dinheiro público de Camaçari está sendo investido.</p>
       </div>
 
       <div class="orcamento-total-card">
+        <i class="fa-solid fa-sack-dollar" style="font-size:2rem; opacity:0.8;" aria-hidden="true"></i>
         <span class="orcamento-label">Orçamento total 2026</span>
         <span class="orcamento-valor">R$ 520.000.000</span>
-        <span class="orcamento-sub">Previsão anual · Fonte: SEFAZ</span>
+        <span class="orcamento-sub">Previsão anual — Fonte: SEFAZ</span>
       </div>
 
-      <!-- Gráfico de barras por secretaria (CSS + JS) -->
+      <!-- Gráfico por secretaria -->
       <div class="grafico-section">
-        <h3 class="subsection-titulo">Investimento por Secretaria</h3>
-        <div id="grafico-secretarias" class="grafico-barras" aria-label="Gráfico de investimento por secretaria" role="img">
-          <!-- Barras geradas pelo JS -->
-        </div>
+        <h3 class="subsection-titulo">
+          <i class="fa-solid fa-chart-bar" aria-hidden="true"></i>
+          Investimento por Secretaria
+        </h3>
+        <div id="grafico-secretarias" class="grafico-barras" aria-label="Gráfico de investimento por secretaria" role="img"></div>
       </div>
 
-      <!-- Execução por bairro -->
+      <!-- Gráfico por bairro -->
       <div class="grafico-section">
-        <h3 class="subsection-titulo">Investimento por Bairro</h3>
-
-        <div class="filtro-grupo">
-          <label for="filtro-bairro-orcamento" class="filtro-label">Ver bairro</label>
+        <h3 class="subsection-titulo">
+          <i class="fa-solid fa-map-location" aria-hidden="true"></i>
+          Investimento por Bairro
+        </h3>
+        <div class="filtro-grupo" style="margin-bottom:16px;">
+          <label for="filtro-bairro-orcamento" class="filtro-label">Ver bairro específico</label>
           <select id="filtro-bairro-orcamento" class="filtro-select">
             <option value="">Todos</option>
+            <option value="Nova Brasília">Nova Brasília</option>
             <option value="Centro">Centro</option>
             <option value="Gleba A">Gleba A</option>
             <option value="Gleba B">Gleba B</option>
-            <option value="Nova Brasília">Nova Brasília</option>
             <option value="Abrantes">Abrantes</option>
           </select>
         </div>
-
-        <div id="grafico-bairros" class="grafico-barras" aria-label="Gráfico de investimento por bairro" role="img">
-          <!-- Barras geradas pelo JS -->
-        </div>
+        <div id="grafico-bairros" class="grafico-barras" aria-label="Gráfico de investimento por bairro" role="img"></div>
       </div>
 
       <p class="fonte-dados">
-        <span aria-hidden="true">📋</span>
-        Dados de homologação — Integração com API SEFAZ prevista para Semana 5 do Roadmap.
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        Dados de homologação. Integração com API SEFAZ prevista para a Semana 5.
       </p>
     </section>
 
@@ -228,14 +280,18 @@
     <section id="aba-votacao" class="aba" role="tabpanel" aria-labelledby="tab-votacao" hidden>
 
       <div class="aba-cabecalho">
-        <h2 class="aba-titulo">🗳️ Vote nas Melhorias</h2>
-        <p class="aba-subtitulo">Você tem <strong>1 voto por proposta</strong>. Seu CPF garante que cada voz conte uma vez.</p>
+        <h2 class="aba-titulo">Vote nas Melhorias</h2>
+        <p class="aba-subtitulo" id="votacao-info-usuario">
+          Faça login para votar. Você pode votar em <strong>1 proposta</strong> do seu bairro.
+        </p>
       </div>
 
       <!-- Filtro bairro -->
       <div class="filtros">
         <div class="filtro-grupo">
-          <label for="filtro-bairro-votacao" class="filtro-label">Filtrar por bairro</label>
+          <label for="filtro-bairro-votacao" class="filtro-label">
+            <i class="fa-solid fa-map-pin" aria-hidden="true"></i> Filtrar por bairro
+          </label>
           <select id="filtro-bairro-votacao" class="filtro-select">
             <option value="">Todos os bairros</option>
             <option value="Centro">Centro</option>
@@ -243,107 +299,218 @@
             <option value="Abrantes">Abrantes</option>
             <option value="Radial A">Radial A</option>
             <option value="Nova Brasília">Nova Brasília</option>
+            <option value="Gleba B">Gleba B</option>
           </select>
         </div>
       </div>
 
       <!-- Lista de propostas (preenchida pelo JS) -->
-      <div id="lista-propostas" class="lista-propostas" aria-live="polite">
-        <!-- Cards gerados pelo JS -->
+      <div id="lista-propostas" class="lista-propostas" aria-live="polite" aria-label="Lista de propostas para votação"></div>
+
+    </section>
+
+    <!-- ── ABA: SOLICITAÇÕES ─────────────────────────────────── -->
+    <section id="aba-solicitacoes" class="aba" role="tabpanel" aria-labelledby="tab-solicitacoes" hidden>
+
+      <div class="aba-cabecalho">
+        <h2 class="aba-titulo">Solicitar Serviço</h2>
+        <p class="aba-subtitulo">Envie um pedido diretamente para a secretaria responsável.</p>
       </div>
 
-      <!-- Aviso prazo de retorno -->
-      <div class="aviso-prazo" role="note">
-        <span aria-hidden="true">📅</span>
-        <strong>Regra de ouro:</strong> O gestor público tem até <strong>30 dias</strong> após cada votação para dar retorno oficial no app.
+      <!-- Categorias de solicitação -->
+      <div class="solicitacao-categorias" aria-label="Tipos de solicitação">
+        <button class="categoria-btn ativa" data-cat="todos" onclick="App.filtrarCategorias('todos')">
+          <i class="fa-solid fa-border-all" aria-hidden="true"></i>
+          <span>Todas</span>
+        </button>
+        <button class="categoria-btn" data-cat="SEINFRA" onclick="App.filtrarCategorias('SEINFRA')">
+          <i class="fa-solid fa-road" aria-hidden="true"></i>
+          <span>SEINFRA</span>
+        </button>
+        <button class="categoria-btn" data-cat="SEDUR" onclick="App.filtrarCategorias('SEDUR')">
+          <i class="fa-solid fa-seedling" aria-hidden="true"></i>
+          <span>SEDUR</span>
+        </button>
+        <button class="categoria-btn" data-cat="SEFAZ" onclick="App.filtrarCategorias('SEFAZ')">
+          <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+          <span>SEFAZ</span>
+        </button>
       </div>
 
+      <!-- Tipos de serviço disponíveis -->
+      <div id="tipos-servico" class="tipos-servico-grid" aria-label="Tipos de serviço disponíveis"></div>
+
+      <!-- Formulário de solicitação -->
+      <div id="form-solicitacao-container" class="form-solicitacao-card" hidden>
+        <div class="form-solicitacao-header">
+          <h3 id="form-solicitacao-titulo" class="subsection-titulo"></h3>
+          <button class="btn-fechar-form" onclick="App.fecharFormSolicitacao()" aria-label="Fechar formulário">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div class="form-grupo">
+          <label for="sol-bairro" class="form-label">Seu bairro</label>
+          <select id="sol-bairro" class="filtro-select">
+            <option value="">Selecione seu bairro</option>
+            <option>Centro</option>
+            <option>Gleba A</option>
+            <option>Gleba B</option>
+            <option>Nova Brasília</option>
+            <option>Abrantes</option>
+            <option>PHOC</option>
+            <option>Radial A</option>
+          </select>
+        </div>
+
+        <div class="form-grupo">
+          <label for="sol-endereco" class="form-label">Endereço ou referência</label>
+          <input type="text" id="sol-endereco" class="form-input" placeholder="Ex.: Rua das Acácias, próximo ao mercado" />
+        </div>
+
+        <div class="form-grupo">
+          <label for="sol-descricao" class="form-label">Descreva o problema</label>
+          <textarea id="sol-descricao" class="form-input form-textarea" placeholder="Descreva o que precisa ser resolvido de forma clara e simples." rows="4"></textarea>
+        </div>
+
+        <div id="sol-erro" class="form-erro" role="alert" hidden></div>
+        <div id="sol-sucesso" class="form-sucesso" role="status" hidden></div>
+
+        <button class="btn-primario btn-bloco" onclick="App.enviarSolicitacao()">
+          <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+          Enviar Solicitação
+        </button>
+        <p class="form-nota">
+          <i class="fa-solid fa-lock" aria-hidden="true"></i>
+          Seus dados são protegidos pela LGPD.
+        </p>
+      </div>
     </section>
 
     <!-- ── ABA: PERFIL ───────────────────────────────────────── -->
     <section id="aba-perfil" class="aba" role="tabpanel" aria-labelledby="tab-perfil" hidden>
 
       <div class="aba-cabecalho">
-        <h2 class="aba-titulo">👤 Meu Perfil</h2>
+        <h2 class="aba-titulo">Meu Perfil</h2>
       </div>
 
-      <!-- Estado: não logado -->
+      <!-- Não logado -->
       <div id="perfil-nao-logado" class="perfil-bloco">
-        <div class="perfil-avatar" aria-hidden="true">🧑‍💼</div>
+        <div class="perfil-avatar-wrap">
+          <i class="fa-solid fa-circle-user" style="font-size:5rem; color:var(--color-cinza-400);" aria-hidden="true"></i>
+        </div>
         <p class="perfil-texto">
-          Entre com seu CPF para acompanhar suas votações e receber notificações sobre obras do seu bairro.
+          Entre com seu CPF para acompanhar suas votações e receber avisos sobre obras do seu bairro.
         </p>
-        <button class="btn-primario" id="btn-login-perfil" onclick="App.abrirModal()">
+        <button class="btn-primario" onclick="App.abrirModal()">
+          <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
           Entrar agora
         </button>
-        <div class="beneficios-lista" aria-label="Benefícios de criar conta">
-          <div class="beneficio-item"><span aria-hidden="true">✅</span> Acompanhe suas votações</div>
-          <div class="beneficio-item"><span aria-hidden="true">✅</span> Receba alertas de obras no seu bairro</div>
-          <div class="beneficio-item"><span aria-hidden="true">✅</span> Avalie os serviços públicos</div>
-          <div class="beneficio-item"><span aria-hidden="true">✅</span> Histórico das suas participações</div>
+        <div class="beneficios-lista" aria-label="Vantagens de criar conta">
+          <div class="beneficio-item">
+            <i class="fa-solid fa-circle-check" style="color:var(--color-verde);" aria-hidden="true"></i>
+            Acompanhe suas votações
+          </div>
+          <div class="beneficio-item">
+            <i class="fa-solid fa-circle-check" style="color:var(--color-verde);" aria-hidden="true"></i>
+            Receba avisos de obras no seu bairro
+          </div>
+          <div class="beneficio-item">
+            <i class="fa-solid fa-circle-check" style="color:var(--color-verde);" aria-hidden="true"></i>
+            Envie solicitações às secretarias
+          </div>
+          <div class="beneficio-item">
+            <i class="fa-solid fa-circle-check" style="color:var(--color-verde);" aria-hidden="true"></i>
+            Histórico completo das suas participações
+          </div>
         </div>
       </div>
 
-      <!-- Estado: logado (oculto por padrão) -->
+      <!-- Logado -->
       <div id="perfil-logado" class="perfil-bloco" hidden>
-        <div class="perfil-avatar" aria-hidden="true">🧑‍💼</div>
+        <div class="perfil-avatar-wrap">
+          <i class="fa-solid fa-circle-user" style="font-size:5rem; color:var(--color-verde);" aria-hidden="true"></i>
+        </div>
         <p class="perfil-nome" id="perfil-nome-usuario">Cidadão</p>
-        <p class="perfil-cpf" id="perfil-cpf-usuario"></p>
+        <p class="perfil-dado" id="perfil-cpf-usuario"></p>
+        <p class="perfil-dado" id="perfil-bairro-usuario"></p>
 
         <div class="perfil-stats">
           <div class="perfil-stat">
-            <span id="meus-votos">0</span>
-            <span>Votos dados</span>
+            <i class="fa-solid fa-check-to-slot" aria-hidden="true"></i>
+            <span id="meus-votos-count">0</span>
+            <span>Votos</span>
           </div>
           <div class="perfil-stat">
-            <span id="obras-seguidas">0</span>
-            <span>Obras seguidas</span>
+            <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+            <span id="minhas-solicitacoes-count">0</span>
+            <span>Solicitações</span>
           </div>
         </div>
 
         <!-- Pesquisa de satisfação -->
-        <div class="satisfacao-section" role="group" aria-labelledby="satisfacao-titulo">
-          <h3 class="subsection-titulo" id="satisfacao-titulo">Como você avalia a transparência desta plataforma?</h3>
+        <div class="satisfacao-section" role="group" aria-labelledby="sat-titulo">
+          <h3 class="subsection-titulo" id="sat-titulo">Como você avalia a transparência desta plataforma?</h3>
           <div class="satisfacao-opcoes" id="satisfacao-opcoes">
-            <button class="satisfacao-btn" data-valor="1" aria-label="Ruim">😞<span>Ruim</span></button>
-            <button class="satisfacao-btn" data-valor="2" aria-label="Regular">😐<span>Regular</span></button>
-            <button class="satisfacao-btn" data-valor="3" aria-label="Bom">😊<span>Bom</span></button>
-            <button class="satisfacao-btn" data-valor="4" aria-label="Excelente">🤩<span>Ótimo</span></button>
+            <button class="satisfacao-btn" data-valor="1" aria-label="Ruim">
+              <i class="fa-regular fa-face-frown" aria-hidden="true"></i>
+              <span>Ruim</span>
+            </button>
+            <button class="satisfacao-btn" data-valor="2" aria-label="Regular">
+              <i class="fa-regular fa-face-meh" aria-hidden="true"></i>
+              <span>Regular</span>
+            </button>
+            <button class="satisfacao-btn" data-valor="3" aria-label="Bom">
+              <i class="fa-regular fa-face-smile" aria-hidden="true"></i>
+              <span>Bom</span>
+            </button>
+            <button class="satisfacao-btn" data-valor="4" aria-label="Ótimo">
+              <i class="fa-regular fa-face-grin-stars" aria-hidden="true"></i>
+              <span>Ótimo</span>
+            </button>
           </div>
-          <div id="satisfacao-feedback" class="satisfacao-feedback" hidden role="status">
-            Obrigado pela sua avaliação! 🙏
+          <div id="satisfacao-feedback" class="satisfacao-feedback" hidden role="status" aria-live="polite">
+            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+            Obrigado pela sua avaliação!
           </div>
         </div>
 
-        <button class="btn-outline btn-sair" id="btn-sair" onclick="App.sair()">Sair da conta</button>
+        <button class="btn-sair" onclick="App.sair()">
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+          Sair da conta
+        </button>
       </div>
     </section>
 
   </main>
 
   <!-- ============================================================
-       BOTTOM NAVIGATION (mobile-first)
+       BOTTOM NAVIGATION
   ============================================================ -->
   <nav class="bottom-nav" role="tablist" aria-label="Navegação principal">
     <button class="nav-item nav-ativo" id="tab-inicio" role="tab" aria-selected="true" aria-controls="aba-inicio" onclick="App.navegarPara('inicio')">
-      <span class="nav-icone" aria-hidden="true">🏠</span>
+      <i class="fa-solid fa-house nav-icone" aria-hidden="true"></i>
       <span class="nav-label">Início</span>
     </button>
-    <button class="nav-item" id="tab-obras" role="tab" aria-selected="false" aria-controls="aba-obras" onclick="App.navegarPara('obras')">
-      <span class="nav-icone" aria-hidden="true">🏗️</span>
+    <button class="nav-item" id="tab-mapa" role="tab" aria-selected="false" aria-controls="aba-mapa" onclick="App.navegarPara('mapa')">
+      <i class="fa-solid fa-map-location-dot nav-icone" aria-hidden="true"></i>
       <span class="nav-label">Obras</span>
     </button>
     <button class="nav-item" id="tab-orcamento" role="tab" aria-selected="false" aria-controls="aba-orcamento" onclick="App.navegarPara('orcamento')">
-      <span class="nav-icone" aria-hidden="true">💰</span>
+      <i class="fa-solid fa-chart-pie nav-icone" aria-hidden="true"></i>
       <span class="nav-label">Orçamento</span>
     </button>
     <button class="nav-item" id="tab-votacao" role="tab" aria-selected="false" aria-controls="aba-votacao" onclick="App.navegarPara('votacao')">
-      <span class="nav-icone" aria-hidden="true">🗳️</span>
+      <i class="fa-solid fa-check-to-slot nav-icone" aria-hidden="true"></i>
       <span class="nav-label">Votar</span>
-      <span class="nav-badge" id="votacao-badge" aria-label="6 propostas abertas">6</span>
+      <span class="nav-badge" id="votacao-badge" aria-label="Propostas disponíveis">6</span>
+    </button>
+    <button class="nav-item" id="tab-solicitacoes" role="tab" aria-selected="false" aria-controls="aba-solicitacoes" onclick="App.navegarPara('solicitacoes')">
+      <i class="fa-solid fa-headset nav-icone" aria-hidden="true"></i>
+      <span class="nav-label">Pedir</span>
     </button>
     <button class="nav-item" id="tab-perfil" role="tab" aria-selected="false" aria-controls="aba-perfil" onclick="App.navegarPara('perfil')">
-      <span class="nav-icone" aria-hidden="true">👤</span>
+      <i class="fa-solid fa-circle-user nav-icone" aria-hidden="true"></i>
       <span class="nav-label">Perfil</span>
     </button>
   </nav>
@@ -353,63 +520,77 @@
   ============================================================ -->
   <div id="modal-login" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-titulo" hidden>
     <div class="modal-caixa">
-      <button class="modal-fechar" id="btn-fechar-modal" aria-label="Fechar janela de login">✕</button>
+      <button class="modal-fechar" id="btn-fechar-modal" aria-label="Fechar janela de login">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
 
-      <div class="modal-logo" aria-hidden="true">🏛️</div>
+      <div class="modal-icone" aria-hidden="true">
+        <i class="fa-solid fa-building-columns"></i>
+      </div>
       <h2 class="modal-titulo" id="modal-titulo">Entrar na Plataforma</h2>
-      <p class="modal-subtitulo">Use seu CPF e e-mail para acessar.</p>
+      <p class="modal-subtitulo">Use seu CPF e e-mail para acessar seus dados.</p>
 
       <div class="form-grupo">
         <label for="input-cpf" class="form-label">CPF</label>
-        <input
-          type="text"
-          id="input-cpf"
-          class="form-input"
-          placeholder="000.000.000-00"
-          maxlength="14"
-          inputmode="numeric"
-          aria-describedby="cpf-dica"
-        />
+        <input type="text" id="input-cpf" class="form-input" placeholder="000.000.000-00"
+          maxlength="14" inputmode="numeric" aria-describedby="cpf-dica" autocomplete="off" />
         <span id="cpf-dica" class="form-dica">Somente números</span>
       </div>
 
       <div class="form-grupo">
         <label for="input-email" class="form-label">E-mail</label>
-        <input
-          type="email"
-          id="input-email"
-          class="form-input"
-          placeholder="seuemail@exemplo.com"
-        />
+        <input type="email" id="input-email" class="form-input" placeholder="seuemail@exemplo.com" autocomplete="email" />
+      </div>
+
+      <!-- Seleção de bairro no cadastro -->
+      <div class="form-grupo">
+        <label for="input-bairro" class="form-label">Seu bairro</label>
+        <select id="input-bairro" class="filtro-select" style="width:100%">
+          <option value="">Selecione seu bairro</option>
+          <option value="Centro">Centro</option>
+          <option value="Gleba A">Gleba A</option>
+          <option value="Gleba B">Gleba B</option>
+          <option value="Nova Brasília">Nova Brasília</option>
+          <option value="Abrantes">Abrantes</option>
+          <option value="PHOC">PHOC</option>
+          <option value="Radial A">Radial A</option>
+        </select>
       </div>
 
       <div id="login-erro" class="form-erro" role="alert" hidden></div>
 
       <button class="btn-primario btn-bloco" id="btn-confirmar-login" onclick="App.fazerLogin()">
+        <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
         Entrar
       </button>
 
       <p class="modal-rodape">
-        Seus dados são protegidos pela <strong>LGPD</strong>.<br/>
-        Integração com Firebase Auth.
+        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+        Seus dados são protegidos pela <strong>LGPD</strong>.
       </p>
     </div>
   </div>
 
   <!-- ============================================================
-       TOAST DE FEEDBACK (votação, erros, sucesso)
+       MODAL DETALHE DA OBRA
+  ============================================================ -->
+  <div id="modal-obra" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="obra-modal-titulo" hidden>
+    <div class="modal-caixa modal-caixa-obra">
+      <button class="modal-fechar" id="btn-fechar-obra" aria-label="Fechar detalhe da obra">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+      <div id="obra-modal-conteudo"></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       TOAST DE FEEDBACK
   ============================================================ -->
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-  <!-- ============================================================
-       MODAL DE DETALHE DA OBRA
-  ============================================================ -->
-  <div id="modal-obra" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="obra-modal-titulo" hidden>
-    <div class="modal-caixa">
-      <button class="modal-fechar" id="btn-fechar-obra" aria-label="Fechar detalhe da obra">✕</button>
-      <div id="obra-modal-conteudo"><!-- preenchido pelo JS --></div>
-    </div>
-  </div>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
   <script src="script.js"></script>
 </body>
