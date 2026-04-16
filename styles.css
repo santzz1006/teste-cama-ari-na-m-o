@@ -48,8 +48,8 @@
   --text-inverso:         #FFFFFF;
 
   /* Tipografia */
---fonte-display: 'Montserrat', sans-serif;
---fonte-corpo: 'Roboto', sans-serif;
+--fonte-display: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+--fonte-corpo: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
 
   /* Layout */
   --container-max:        680px;
@@ -1481,3 +1481,438 @@ a { color: var(--color-verde); text-decoration: none; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ================================================================
+   SIDEBAR DESKTOP — Colunas Laterais (≥1100px)
+   Mobile: ocultas. Desktop: exibidas ao lado do conteúdo central.
+================================================================ */
+
+/* ── Wrapper de 3 colunas ─── */
+.desktop-layout {
+  display: block; /* mobile: sem alteração */
+}
+
+/* ── Sidebars: ocultas no mobile ─── */
+.sidebar {
+  display: none;
+}
+
+/* ── Ativa o layout de 3 colunas apenas no desktop ─── */
+@media (min-width: 1100px) {
+
+  /* Reajusta o body para suportar o layout mais largo */
+  body {
+    background-color: var(--color-cinza-100);
+  }
+
+  /* Container geral de 3 colunas */
+  .desktop-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr 260px;
+    grid-template-areas: "esq centro dir";
+    gap: 0 20px;
+    max-width: 1260px;
+    margin: 0 auto;
+    padding: 0 16px;
+    align-items: start;
+    min-height: calc(100vh - var(--altura-header) - var(--altura-nav));
+  }
+
+  /* Posiciona cada área */
+  .sidebar-esq { grid-area: esq; }
+  #main-content { grid-area: centro; }
+  .sidebar-dir  { grid-area: dir; }
+
+  /* Remove o padding lateral do main no desktop (o grid cuida disso) */
+  #main-content {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* Sidebars: visíveis, sticky, rolam com a página mas ficam presas ao topo */
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: sticky;
+    top: calc(var(--altura-header) + 16px);
+    max-height: calc(100vh - var(--altura-header) - var(--altura-nav) - 32px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-cinza-300) transparent;
+    padding-top: 16px;
+    padding-bottom: 80px; /* espaço para a nav */
+  }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--color-cinza-300); border-radius: 4px; }
+
+  /* Garante que a bottom-nav continue no max-width correto */
+  .bottom-nav {
+    max-width: 1260px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: var(--raio-lg) var(--raio-lg) 0 0;
+    border-left: 1px solid var(--color-cinza-200);
+    border-right: 1px solid var(--color-cinza-200);
+  }
+}
+
+/* ================================================================
+   COMPONENTES DAS SIDEBARS
+================================================================ */
+
+/* Card base */
+.sidebar-card {
+  background: var(--color-branco);
+  border-radius: var(--raio-md);
+  padding: var(--espaco-md);
+  box-shadow: var(--sombra-sm);
+  border: 1px solid var(--color-cinza-200);
+}
+
+.sidebar-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-xs);
+  margin-bottom: var(--espaco-sm);
+  padding-bottom: var(--espaco-sm);
+  border-bottom: 1px solid var(--color-cinza-200);
+}
+
+.sidebar-card-titulo {
+  font-family: var(--fonte-corpo);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-principal);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.sidebar-card-desc {
+  font-size: 0.78rem;
+  color: var(--text-suave);
+  margin-bottom: var(--espaco-sm);
+  line-height: 1.4;
+}
+
+/* ── FEED DE ATIVIDADE ─── */
+.feed-lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.feed-item {
+  display: flex;
+  gap: var(--espaco-sm);
+  padding: var(--espaco-sm) 0;
+  border-bottom: 1px solid var(--color-cinza-200);
+  align-items: flex-start;
+  animation: feedEntrar 0.35s ease;
+}
+.feed-item:last-child { border-bottom: none; }
+
+@keyframes feedEntrar {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.feed-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+.feed-dot-verde    { background: var(--color-sucesso); }
+.feed-dot-ambar    { background: var(--color-seinfra); }
+.feed-dot-azul     { background: var(--color-sefaz); }
+.feed-dot-teal     { background: var(--color-sedur); }
+
+.feed-texto {
+  font-size: 0.78rem;
+  color: var(--text-secundario);
+  line-height: 1.4;
+  flex: 1;
+}
+.feed-texto strong { color: var(--text-principal); }
+
+.feed-tempo {
+  font-size: 0.7rem;
+  color: var(--text-suave);
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* ── EDUCAÇÃO CIDADÃ ─── */
+.educacao-card {
+  background: var(--color-verde-bg);
+  border-radius: var(--raio-sm);
+  padding: var(--espaco-sm) var(--espaco-md);
+  margin-bottom: var(--espaco-sm);
+  border-left: 3px solid var(--color-verde);
+  animation: feedEntrar 0.3s ease;
+}
+
+.educacao-termo {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-verde-escuro);
+  margin-bottom: 4px;
+  display: block;
+}
+
+.educacao-explicacao {
+  font-size: 0.78rem;
+  color: var(--text-secundario);
+  line-height: 1.5;
+}
+
+.educacao-nav-btn {
+  width: 100%;
+  min-height: 36px;
+  background: transparent;
+  border: 1px solid var(--color-verde);
+  color: var(--color-verde);
+  border-radius: var(--raio-pill);
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espaco-xs);
+  cursor: pointer;
+  transition: background var(--transicao), color var(--transicao);
+}
+.educacao-nav-btn:hover {
+  background: var(--color-verde);
+  color: var(--text-inverso);
+}
+
+/* ── FILTRO DE BAIRROS ─── */
+.bairros-lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: var(--espaco-sm);
+}
+
+.bairro-item-btn {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 var(--espaco-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-cinza-50);
+  border: 1px solid var(--color-cinza-200);
+  border-radius: var(--raio-sm);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secundario);
+  cursor: pointer;
+  transition: background var(--transicao), border-color var(--transicao), color var(--transicao);
+  text-align: left;
+}
+.bairro-item-btn:hover {
+  background: var(--color-verde-bg);
+  border-color: var(--color-verde-claro);
+  color: var(--color-verde-escuro);
+}
+.bairro-item-btn.ativo {
+  background: var(--color-verde);
+  border-color: var(--color-verde-escuro);
+  color: var(--text-inverso);
+  font-weight: 700;
+}
+.bairro-item-btn.ativo .bairro-obras-count {
+  background: rgba(255,255,255,0.25);
+  color: white;
+}
+
+.bairro-obras-count {
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: var(--color-verde-claro);
+  color: var(--color-verde-escuro);
+  padding: 2px 7px;
+  border-radius: var(--raio-pill);
+}
+
+.bairro-limpar-btn {
+  width: 100%;
+  min-height: 36px;
+  background: transparent;
+  border: 1px dashed var(--color-cinza-400);
+  color: var(--text-suave);
+  border-radius: var(--raio-pill);
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espaco-xs);
+  cursor: pointer;
+  transition: border-color var(--transicao), color var(--transicao);
+}
+.bairro-limpar-btn:hover {
+  border-color: var(--color-verde);
+  color: var(--color-verde);
+}
+
+/* ── ATALHOS EMERGENCIAIS ─── */
+.atalhos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.atalho-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-sm);
+  padding: var(--espaco-xs) var(--espaco-sm);
+  min-height: 44px;
+  background: var(--color-cinza-50);
+  border: 1px solid var(--color-cinza-200);
+  border-radius: var(--raio-sm);
+  text-decoration: none;
+  cursor: pointer;
+  font-family: var(--fonte-corpo);
+  transition: background var(--transicao), border-color var(--transicao);
+  width: 100%;
+  text-align: left;
+}
+.atalho-btn:hover {
+  background: var(--color-sefaz-claro);
+  border-color: var(--color-sefaz);
+}
+.atalho-btn i {
+  font-size: 1.1rem;
+  color: var(--color-sefaz);
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.atalho-btn div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.atalho-nome {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-principal);
+  line-height: 1;
+}
+.atalho-numero {
+  font-size: 0.72rem;
+  color: var(--text-suave);
+  line-height: 1;
+}
+
+/* SAC usa cor verde */
+.atalho-btn-sac { border: none; background: var(--color-verde-bg); border: 1px solid var(--color-verde-claro); }
+.atalho-btn-sac:hover { background: var(--color-verde-claro); border-color: var(--color-verde); }
+.atalho-btn-sac i { color: var(--color-verde); }
+.atalho-btn-sac .atalho-nome { color: var(--color-verde-escuro); }
+
+/* ── RANKING DE ENGAJAMENTO ─── */
+.ranking-lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ranking-item {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-sm);
+  padding: var(--espaco-xs) var(--espaco-sm);
+  background: var(--color-cinza-50);
+  border-radius: var(--raio-sm);
+  border: 1px solid var(--color-cinza-200);
+}
+
+.ranking-pos {
+  font-family: var(--fonte-display);
+  font-size: 1rem;
+  font-weight: 900;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.ranking-pos-1 { color: #D97706; } /* ouro */
+.ranking-pos-2 { color: #6B7280; } /* prata */
+.ranking-pos-3 { color: #B45309; } /* bronze */
+.ranking-pos-n { color: var(--text-suave); font-size: 0.82rem; font-weight: 700; }
+
+.ranking-info { flex: 1; }
+.ranking-bairro {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-principal);
+  display: block;
+  line-height: 1;
+}
+.ranking-votos {
+  font-size: 0.7rem;
+  color: var(--text-suave);
+}
+
+.ranking-barra-wrap {
+  width: 50px;
+  height: 6px;
+  background: var(--color-cinza-200);
+  border-radius: var(--raio-pill);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.ranking-barra-fill {
+  height: 100%;
+  border-radius: var(--raio-pill);
+  background: linear-gradient(90deg, var(--color-verde) 0%, #2ECC71 100%);
+  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ranking-item:nth-child(1) .ranking-barra-fill { background: linear-gradient(90deg, #D97706, #FBBF24); }
+.ranking-item:nth-child(2) .ranking-barra-fill { background: linear-gradient(90deg, #4B5563, #9CA3AF); }
+.ranking-item:nth-child(3) .ranking-barra-fill { background: linear-gradient(90deg, #B45309, #D97706); }
+
+/* Medalhas visuais no top 3 */
+.ranking-item:nth-child(1) { border-color: #FDE68A; background: #FFFBEB; }
+.ranking-item:nth-child(2) { border-color: #D1D5DB; background: #F9FAFB; }
+.ranking-item:nth-child(3) { border-color: #FDE68A; background: #FFFBEB; opacity: .85; }
+
+/* ── Indicador de bairro ativo no header central ─── */
+.bairro-ativo-banner {
+  background: var(--color-verde-bg);
+  border: 1px solid var(--color-verde-claro);
+  border-radius: var(--raio-md);
+  padding: var(--espaco-sm) var(--espaco-md);
+  font-size: 0.84rem;
+  color: var(--color-verde-escuro);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+  margin-bottom: var(--espaco-md);
+  animation: feedEntrar 0.25s ease;
+}
+.bairro-ativo-banner strong {
+  font-weight: 700;
+}
+.bairro-ativo-banner button {
+  font-size: 0.78rem;
+  color: var(--color-verde);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.bairro-ativo-banner button:hover { text-decoration: underline; }
+

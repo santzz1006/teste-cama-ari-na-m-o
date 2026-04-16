@@ -1094,4 +1094,245 @@ const App = {
 /* Expõe App globalmente (onclick no HTML) */
 window.App = App;
 
-document.addEventListener('DOMContentLoaded', App.init.bind(App));
+/* ================================================================
+   MÓDULO SIDEBAR — colunas laterais desktop
+   Totalmente independente do App; não altera nenhum código existente.
+================================================================ */
+const Sidebar = (() => {
+
+  /* ── Dados do Feed de Atividade ─── */
+  const feedItens = [
+    { cor: 'verde',  texto: 'Obra da <strong>Radial A</strong> atualizada pela SEINFRA',        tempo: 'agora' },
+    { cor: 'ambar',  texto: '<strong>150 cidadãos</strong> do Centro já votaram hoje',           tempo: '2 min' },
+    { cor: 'teal',   texto: 'Nova proposta lançada para a <strong>Gleba B</strong>',             tempo: '8 min' },
+    { cor: 'azul',   texto: 'Orçamento de <strong>Abrantes</strong> atualizado pela SEFAZ',     tempo: '15 min' },
+    { cor: 'verde',  texto: 'Obra da <strong>UBS Gleba A</strong> marcada como concluída',      tempo: '22 min' },
+    { cor: 'ambar',  texto: '<strong>Nova Brasília</strong> ultrapassou 500 votos esta semana',  tempo: '40 min' },
+    { cor: 'teal',   texto: 'Calçadas de <strong>Abrantes</strong> chegaram a 72% de execução', tempo: '1 h' },
+    { cor: 'azul',   texto: 'Solicitação de <strong>Gleba A</strong> encaminhada à SEDUR',      tempo: '1 h' },
+  ];
+
+  /* ── Dados de Educação Cidadã ─── */
+  const dicas = [
+    {
+      termo: 'O que é Licitação?',
+      explicacao: 'É o processo obrigatório que a prefeitura usa para contratar empresas de forma transparente. Garante que o dinheiro público seja bem gasto e evita favorecimentos.',
+    },
+    {
+      termo: 'O que faz a SEDUR?',
+      explicacao: 'A Secretaria de Desenvolvimento Urbano cuida do crescimento ordenado da cidade: licenças de construção, áreas verdes, parques e mobilidade urbana.',
+    },
+    {
+      termo: 'Como o orçamento municipal é dividido?',
+      explicacao: 'O orçamento é aprovado pela Câmara Municipal todo ano. Cada secretaria recebe uma fatia conforme as prioridades da cidade — saúde, infraestrutura, educação e mais.',
+    },
+    {
+      termo: 'O que é Transparência Pública?',
+      explicacao: 'É o dever do governo de mostrar ao cidadão como o dinheiro público está sendo usado. Qualquer pessoa tem o direito de pedir informações pelo acesso à informação (Lei 12.527).',
+    },
+    {
+      termo: 'O que é a SEINFRA?',
+      explicacao: 'Secretaria de Infraestrutura. Cuida de estradas, pavimentação, drenagem, iluminação pública e obras de contenção. É a que mais obras executa no município.',
+    },
+    {
+      termo: 'O que é Participação Cidadã?',
+      explicacao: 'É quando o morador participa das decisões da cidade — votando em propostas, enviando solicitações ou acompanhando obras. Mais participação significa melhor gestão pública.',
+    },
+  ];
+
+  /* ── Dados dos bairros com contagem de obras ─── */
+  const bairros = [
+    { nome: 'Centro',        slug: 'centro',        obras: 2 },
+    { nome: 'Gleba A',       slug: 'gleba-a',       obras: 1 },
+    { nome: 'Gleba B',       slug: 'gleba-b',       obras: 1 },
+    { nome: 'Nova Brasília', slug: 'nova-brasilia',  obras: 1 },
+    { nome: 'Abrantes',      slug: 'abrantes',      obras: 1 },
+    { nome: 'PHOC',          slug: 'phoc',           obras: 1 },
+    { nome: 'Radial A',      slug: 'radial-a',       obras: 1 },
+  ];
+
+  /* ── Ranking de engajamento por bairro ─── */
+  const ranking = [
+    { bairro: 'Centro',        votos: 1243, pct: 100 },
+    { bairro: 'Nova Brasília', votos: 987,  pct: 79  },
+    { bairro: 'Gleba A',       votos: 876,  pct: 70  },
+    { bairro: 'Abrantes',      votos: 754,  pct: 61  },
+    { bairro: 'Gleba B',       votos: 612,  pct: 49  },
+    { bairro: 'Radial A',      votos: 489,  pct: 39  },
+    { bairro: 'PHOC',          votos: 280,  pct: 23  },
+  ];
+
+  let dicaAtual = 0;
+  let bairroFiltroAtivo = '';
+
+  /* ── Helpers ─── */
+  function posIcon(i) {
+    if (i === 0) return { cls: 'ranking-pos-1', txt: '1°' };
+    if (i === 1) return { cls: 'ranking-pos-2', txt: '2°' };
+    if (i === 2) return { cls: 'ranking-pos-3', txt: '3°' };
+    return { cls: 'ranking-pos-n', txt: `${i + 1}°` };
+  }
+
+  /* ── Renderização ─── */
+  function renderFeed() {
+    const ul = document.getElementById('feed-lista');
+    if (!ul) return;
+    ul.innerHTML = feedItens.map(item => `
+      <li class="feed-item">
+        <span class="feed-dot feed-dot-${item.cor}" aria-hidden="true"></span>
+        <span class="feed-texto">${item.texto}</span>
+        <span class="feed-tempo" aria-label="${item.tempo} atrás">${item.tempo}</span>
+      </li>
+    `).join('');
+  }
+
+  function renderDica() {
+    const el = document.getElementById('educacao-conteudo');
+    if (!el) return;
+    const d = dicas[dicaAtual];
+    el.innerHTML = `
+      <span class="educacao-termo">${d.termo}</span>
+      <span class="educacao-explicacao">${d.explicacao}</span>
+    `;
+  }
+
+  function renderBairros() {
+    const ul = document.getElementById('bairros-lista');
+    if (!ul) return;
+    ul.innerHTML = bairros.map(b => `
+      <li>
+        <button
+          class="bairro-item-btn ${bairroFiltroAtivo === b.slug ? 'ativo' : ''}"
+          onclick="Sidebar.selecionarBairro('${b.slug}', '${b.nome}')"
+          aria-pressed="${bairroFiltroAtivo === b.slug}"
+          aria-label="Filtrar por ${b.nome}: ${b.obras} obra${b.obras > 1 ? 's' : ''}"
+        >
+          <span>${b.nome}</span>
+          <span class="bairro-obras-count">${b.obras} obra${b.obras > 1 ? 's' : ''}</span>
+        </button>
+      </li>
+    `).join('');
+
+    const btnLimpar = document.getElementById('btn-limpar-bairro');
+    if (btnLimpar) btnLimpar.hidden = !bairroFiltroAtivo;
+  }
+
+  function renderRanking() {
+    const ol = document.getElementById('ranking-lista');
+    if (!ol) return;
+    ol.innerHTML = ranking.map((r, i) => {
+      const pos = posIcon(i);
+      return `
+        <li class="ranking-item">
+          <span class="ranking-pos ${pos.cls}" aria-hidden="true">${pos.txt}</span>
+          <div class="ranking-info">
+            <span class="ranking-bairro">${r.bairro}</span>
+            <span class="ranking-votos">${r.votos.toLocaleString('pt-BR')} votos</span>
+          </div>
+          <div class="ranking-barra-wrap" role="img" aria-label="${r.pct}% do máximo">
+            <div class="ranking-barra-fill" style="width:${r.pct}%"></div>
+          </div>
+        </li>
+      `;
+    }).join('');
+  }
+
+  /* Banner que aparece no conteúdo central quando um bairro está ativo */
+  function atualizarBannerBairro() {
+    const abas = ['aba-inicio', 'aba-mapa', 'aba-orcamento', 'aba-votacao'];
+    abas.forEach(id => {
+      const aba = document.getElementById(id);
+      if (!aba) return;
+      const bannerExist = aba.querySelector('.bairro-ativo-banner');
+      if (bannerExist) bannerExist.remove();
+
+      if (bairroFiltroAtivo) {
+        const nomeBairro = bairros.find(b => b.slug === bairroFiltroAtivo)?.nome || bairroFiltroAtivo;
+        const banner = document.createElement('div');
+        banner.className = 'bairro-ativo-banner';
+        banner.setAttribute('role', 'status');
+        banner.setAttribute('aria-live', 'polite');
+        banner.innerHTML = `
+          <span><i class="fa-solid fa-map-pin" aria-hidden="true"></i> Mostrando: <strong>${nomeBairro}</strong></span>
+          <button onclick="Sidebar.limparFiltroBairro()" aria-label="Remover filtro de bairro">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i> Remover filtro
+          </button>
+        `;
+        aba.insertBefore(banner, aba.firstChild);
+      }
+    });
+  }
+
+  /* ── API pública do módulo ─── */
+  return {
+    init() {
+      renderFeed();
+      renderDica();
+      renderBairros();
+      renderRanking();
+
+      /* Simula novos itens no feed a cada 25 segundos */
+      const novosFeed = [
+        { cor: 'verde',  texto: 'Obra da <strong>Gleba B</strong> teve % atualizado', tempo: 'agora' },
+        { cor: 'ambar',  texto: '<strong>PHOC</strong> recebeu nova solicitação cidadã',     tempo: 'agora' },
+        { cor: 'teal',   texto: 'Prefeitura abriu <strong>consulta pública</strong> para Abrantes', tempo: 'agora' },
+      ];
+      let feedIdx = 0;
+      setInterval(() => {
+        const novo = { ...novosFeed[feedIdx % novosFeed.length], tempo: 'agora' };
+        feedIdx++;
+        const el = document.getElementById('feed-lista');
+        if (!el) return;
+        // Redefine tempos dos existentes
+        feedItens.forEach((f, i) => {
+          const tempos = ['1 min', '3 min', '10 min', '18 min', '25 min', '35 min', '50 min', '1 h'];
+          f.tempo = tempos[i] || '1 h';
+        });
+        feedItens.unshift(novo);
+        if (feedItens.length > 8) feedItens.pop();
+        renderFeed();
+      }, 25000);
+    },
+
+    proximaDica() {
+      dicaAtual = (dicaAtual + 1) % dicas.length;
+      renderDica();
+    },
+
+    selecionarBairro(slug, nome) {
+      bairroFiltroAtivo = slug;
+
+      /* Aplica filtro nas abas de mapa, orçamento e votação */
+      const selMapa = document.getElementById('filtro-bairro-mapa');
+      if (selMapa) { selMapa.value = slug; selMapa.dispatchEvent(new Event('change')); }
+
+      const selVotacao = document.getElementById('filtro-bairro-votacao');
+      if (selVotacao) { selVotacao.value = nome; selVotacao.dispatchEvent(new Event('change')); }
+
+      const selOrc = document.getElementById('filtro-bairro-orcamento');
+      if (selOrc) { selOrc.value = nome; selOrc.dispatchEvent(new Event('change')); }
+
+      renderBairros();
+      atualizarBannerBairro();
+    },
+
+    limparFiltroBairro() {
+      bairroFiltroAtivo = '';
+
+      ['filtro-bairro-mapa', 'filtro-bairro-votacao', 'filtro-bairro-orcamento'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (sel) { sel.value = ''; sel.dispatchEvent(new Event('change')); }
+      });
+
+      renderBairros();
+      atualizarBannerBairro();
+    },
+  };
+})();
+
+window.Sidebar = Sidebar;
+
+document.addEventListener('DOMContentLoaded', () => {
+  App.init();
+  Sidebar.init();
+});

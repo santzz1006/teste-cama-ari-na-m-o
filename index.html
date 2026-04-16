@@ -18,8 +18,8 @@
   <!-- Google Fonts: Fraunces (display) + DM Sans (corpo) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Roboto:ital,wght@0,400;0,500;0,600;0,700&display=swap" rel="stylesheet" />
-  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;900&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap" rel="stylesheet" />
+
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -59,11 +59,43 @@
     </div>
   </header>
 
-
-  
   <!-- ============================================================
-       CONTEÚDO PRINCIPAL — ABAS
+       LAYOUT DE 3 COLUNAS (desktop ≥1100px)
+       Mobile: sidebar-esq e sidebar-dir ficam ocultas via CSS
   ============================================================ -->
+  <div class="desktop-layout">
+
+    <!-- ── COLUNA ESQUERDA: Feed + Educação Cidadã ─────────────── -->
+    <aside class="sidebar sidebar-esq" aria-label="Acontecendo agora e educação cidadã">
+
+      <!-- Feed de atividade em tempo real -->
+      <div class="sidebar-card" id="card-feed">
+        <div class="sidebar-card-header">
+          <i class="fa-solid fa-circle-dot" style="color:var(--color-sucesso);font-size:.7rem;" aria-hidden="true"></i>
+          <h2 class="sidebar-card-titulo">Acontecendo Agora</h2>
+        </div>
+        <ul class="feed-lista" id="feed-lista" aria-label="Últimas atualizações da plataforma" aria-live="polite">
+          <!-- preenchido pelo JS -->
+        </ul>
+      </div>
+
+      <!-- Educação cidadã — "Você Sabia?" -->
+      <div class="sidebar-card" id="card-educacao">
+        <div class="sidebar-card-header">
+          <i class="fa-solid fa-lightbulb" style="color:var(--color-seinfra);" aria-hidden="true"></i>
+          <h2 class="sidebar-card-titulo">Você Sabia?</h2>
+        </div>
+        <div id="educacao-conteudo" class="educacao-card">
+          <!-- preenchido pelo JS -->
+        </div>
+        <button class="educacao-nav-btn" id="btn-prox-dica" onclick="Sidebar.proximaDica()" aria-label="Ver próxima dica">
+          <i class="fa-solid fa-arrow-right" aria-hidden="true"></i> Próxima dica
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- ── COLUNA CENTRAL (conteúdo existente inalterado) ──────── -->
   <main id="main-content" role="main">
 
     <!-- ── ABA: INÍCIO ──────────────────────────────────────── -->
@@ -483,6 +515,86 @@
     </section>
 
   </main>
+  <!-- fim coluna central -->
+
+    <!-- ── COLUNA DIREITA: Bairros + Atalhos + Ranking ─────────── -->
+    <aside class="sidebar sidebar-dir" aria-label="Filtro por bairro, atalhos e ranking">
+
+      <!-- Filtro rápido de bairros -->
+      <div class="sidebar-card" id="card-bairros">
+        <div class="sidebar-card-header">
+          <i class="fa-solid fa-map-pin" style="color:var(--color-verde);" aria-hidden="true"></i>
+          <h2 class="sidebar-card-titulo">Filtrar por Bairro</h2>
+        </div>
+        <p class="sidebar-card-desc">Clique em um bairro para filtrar obras e votações.</p>
+        <ul class="bairros-lista" id="bairros-lista" aria-label="Lista de bairros para filtro">
+          <!-- preenchido pelo JS -->
+        </ul>
+        <button class="bairro-limpar-btn" id="btn-limpar-bairro" onclick="Sidebar.limparFiltroBairro()" hidden aria-label="Limpar filtro de bairro">
+          <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Mostrar todos
+        </button>
+      </div>
+
+      <!-- Atalhos de serviços emergenciais -->
+      <div class="sidebar-card" id="card-atalhos">
+        <div class="sidebar-card-header">
+          <i class="fa-solid fa-phone-flip" style="color:var(--color-sefaz);" aria-hidden="true"></i>
+          <h2 class="sidebar-card-titulo">Acesso Rápido</h2>
+        </div>
+        <div class="atalhos-lista">
+          <a href="tel:156" class="atalho-btn" aria-label="Ligue para Ouvidoria Municipal, 156">
+            <i class="fa-solid fa-headset" aria-hidden="true"></i>
+            <div>
+              <span class="atalho-nome">Ouvidoria</span>
+              <span class="atalho-numero">156</span>
+            </div>
+          </a>
+          <a href="tel:192" class="atalho-btn" aria-label="Ligue para SAMU, 192">
+            <i class="fa-solid fa-truck-medical" aria-hidden="true"></i>
+            <div>
+              <span class="atalho-nome">SAMU</span>
+              <span class="atalho-numero">192</span>
+            </div>
+          </a>
+          <a href="tel:199" class="atalho-btn" aria-label="Ligue para Defesa Civil, 199">
+            <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+            <div>
+              <span class="atalho-nome">Defesa Civil</span>
+              <span class="atalho-numero">199</span>
+            </div>
+          </a>
+          <a href="tel:193" class="atalho-btn" aria-label="Ligue para Bombeiros, 193">
+            <i class="fa-solid fa-fire-extinguisher" aria-hidden="true"></i>
+            <div>
+              <span class="atalho-nome">Bombeiros</span>
+              <span class="atalho-numero">193</span>
+            </div>
+          </a>
+          <button class="atalho-btn atalho-btn-sac" onclick="App.navegarPara('solicitacoes')" aria-label="Abrir módulo de solicitações">
+            <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+            <div>
+              <span class="atalho-nome">SAC Camaçari</span>
+              <span class="atalho-numero">Agendar</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Ranking de engajamento por bairro -->
+      <div class="sidebar-card" id="card-ranking">
+        <div class="sidebar-card-header">
+          <i class="fa-solid fa-trophy" style="color:var(--color-seinfra);" aria-hidden="true"></i>
+          <h2 class="sidebar-card-titulo">Ranking da Semana</h2>
+        </div>
+        <p class="sidebar-card-desc">Bairros que mais participaram das votações.</p>
+        <ol class="ranking-lista" id="ranking-lista" aria-label="Ranking de participação por bairro">
+          <!-- preenchido pelo JS -->
+        </ol>
+      </div>
+
+    </aside>
+
+  </div><!-- fim .desktop-layout -->
 
   <!-- ============================================================
        BOTTOM NAVIGATION
